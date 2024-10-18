@@ -1,13 +1,13 @@
 package errutils
 
 import (
-	"log"
+	"fmt"
 	"os"
 )
 
 func CheckErr(err error) {
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }

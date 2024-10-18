@@ -1,13 +1,25 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 
 	"github.com/saeidalz13/gurl/internal/dns"
 )
 
 func main() {
-	destIp := dns.MustFetchDomainIp("google.com.")
+	if len(os.Args) < 2 {
+		fmt.Println("must provide domain name")
+		os.Exit(1)
+	}
+
+	domainCmd := flag.NewFlagSet("foo", flag.ExitOnError)
+	_ = domainCmd.String("method", "GET", "HTTP method")
+	domainCmd.Parse(os.Args[2:])
+
+	// os.Args[1] will be domain string
+	destIp := dns.MustFetchDomainIp(os.Args[1])
 	fmt.Println(destIp.String())
 
 	// tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)

@@ -26,15 +26,7 @@ Header sections
 Queries section:
   - Whatever you want to put in the query
 */
-func mustCreateDNSQuery(domain string) []byte {
-	domain = stringutils.TrimPrefixDomain(domain)
-
-	domainParts := strings.Split(domain, ".")
-	if len(domainParts) < 2 {
-		fmt.Println("invalid domain - must be a string delimited by dot")
-		os.Exit(1)
-	}
-
+func mustCreateDNSQuery(domainSegments []string) []byte {
 	id := uint16(rand.Intn(65535))
 	query := make([]byte, 0, 10)
 
@@ -70,7 +62,7 @@ func mustCreateDNSQuery(domain string) []byte {
 
 	// * Question Section (Variable len)
 	// QNAME (Domain section)
-	for _, part := range domainParts {
+	for _, part := range domainSegments {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
 			fmt.Println("invalid input domain")
@@ -91,8 +83,13 @@ func mustCreateDNSQuery(domain string) []byte {
 	return query
 }
 
+// Fetch the domain IPv4 from 8.8.8.8 (Google server).
+// Average time is 25 ms.
 func MustFetchDomainIp(domain string) net.IP {
-	dnsQuery := mustCreateDNSQuery(domain)
+	domainSegments, err := stringutils.PrepareDomainSegments(domain)
+	errutils.CheckErr(err)
+
+	dnsQuery := mustCreateDNSQuery(domainSegments)
 
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
 	errutils.CheckErr(err)
