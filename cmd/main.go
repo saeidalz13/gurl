@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/saeidalz13/gurl/internal/dns"
+	"github.com/saeidalz13/gurl/api"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	domainCmd.Parse(os.Args[2:])
 
 	// os.Args[1] will be domain string
-	destIp := dns.MustFetchDomainIp(os.Args[1])
+	destIp := api.MustFetchDomainIp(os.Args[1])
 	fmt.Println(destIp.String())
 
 	// tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
