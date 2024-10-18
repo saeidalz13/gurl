@@ -2,13 +2,15 @@ package dns
 
 import (
 	"encoding/binary"
-	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/stringutils"
 )
 
 /*
@@ -24,7 +26,15 @@ Header sections
 Queries section:
   - Whatever you want to put in the query
 */
-func createDNSQuery(domain string) ([]byte, error) {
+func mustCreateDNSQuery(domain string) []byte {
+	domain = stringutils.TrimPrefixDomain(domain)
+
+	domainParts := strings.Split(domain, ".")
+	if len(domainParts) < 2 {
+		fmt.Println("invalid domain - must be a string delimited by dot")
+		os.Exit(1)
+	}
+
 	id := uint16(rand.Intn(65535))
 	query := make([]byte, 0, 10)
 
@@ -58,15 +68,14 @@ func createDNSQuery(domain string) ([]byte, error) {
 	// No additional records follow
 	query = append(query, 0x0000, 0x00)
 
-	domainParts := strings.Split(domain, ".")
-	// TODO: Other checks need to be done
-	if len(domainParts) < 2 {
-		return nil, errors.New("invalid domain - must be a string delimited by dot")
-	}
-
 	// * Question Section (Variable len)
 	// QNAME (Domain section)
 	for _, part := range domainParts {
+		part = strings.TrimSpace(part)
+		if len(part) == 0 {
+			fmt.Println("invalid input domain")
+			os.Exit(1)
+		}
 		// Each label prefixed by a length byte, followed by the label itself
 		query = append(query, byte(len(part)))
 		query = append(query, []byte(part)...)
@@ -79,12 +88,11 @@ func createDNSQuery(domain string) ([]byte, error) {
 	// QCLASS -> Class IN (Internet) - 2 bytes
 	query = append(query, 0x00, 0x01)
 
-	return query, nil
+	return query
 }
 
-func MustFetchDomainIp() net.IP {
-	dnsQuery, err := createDNSQuery("google.com")
-	errutils.CheckErr(err)
+func MustFetchDomainIp(domain string) net.IP {
+	dnsQuery := mustCreateDNSQuery(domain)
 
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
 	errutils.CheckErr(err)

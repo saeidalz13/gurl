@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	destIp := dns.MustFetchDomainIp()
+	destIp := dns.MustFetchDomainIp("google.com.")
 	fmt.Println(destIp.String())
 
 	// tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
