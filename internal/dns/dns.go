@@ -67,7 +67,7 @@ func createDNSQuery(domain string) ([]byte, error) {
 	// * Question Section (Variable len)
 	// QNAME (Domain section)
 	for _, part := range domainParts {
-        // Each label prefixed by a length byte, followed by the label itself
+		// Each label prefixed by a length byte, followed by the label itself
 		query = append(query, byte(len(part)))
 		query = append(query, []byte(part)...)
 	}
@@ -93,12 +93,11 @@ func MustFetchDomainIp() net.IP {
 	_, err = udpConn.Write(dnsQuery)
 	errutils.CheckErr(err)
 
-	// DNS responses are small, 512 bytes is enough
+	// DNS responses are small, 128 bytes is enough
 	// Response share the same structure of request with an additional Answers section
-	response := make([]byte, 512)
+	response := make([]byte, 128)
 	_, _, err = udpConn.ReadFrom(response)
 	errutils.CheckErr(err)
-
 	/*
 	   DNS Response:
 	   * Header
@@ -136,10 +135,10 @@ func MustFetchDomainIp() net.IP {
 	endQNameValue := 0x00
 	for int(response[pos]) != endQNameValue {
 		// Move by length of each label + 1 for the length byte
-        // Each label prefixed by a length byte, followed by the label itself
-        // e.g: A domain name consists of labels (e.g., www, example, com in www.example.com).
-        lenghtOfBytes := int(response[pos])  // value of length byte
-		pos += lenghtOfBytes + 1 
+		// Each label prefixed by a length byte, followed by the label itself
+		// e.g: A domain name consists of labels (e.g., www, example, com in www.example.com).
+		lenghtOfBytes := int(response[pos]) // value of length byte
+		pos += lenghtOfBytes + 1
 	}
 	pos += 1 // End of domain 0x00
 	pos += 4 // QType and QClass
