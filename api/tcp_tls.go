@@ -5,11 +5,38 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 )
+
+func writeToTLSConn(tlsConn *tls.Conn, b []byte) error {
+	_, err := tlsConn.Write(b)
+	return err
+}
+
+func readFromTLSConn(tlsConn *tls.Conn) []byte {
+	buf := make([]byte, 2<<12)
+
+	n, err := tlsConn.Read(buf)
+	if err != nil {
+		if err.Error() == "EOF" {
+			os.Exit(0)
+		}
+
+		if strings.Contains(err.Error(), "i/o timeout") {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("error read: %v\n", err)
+		os.Exit(1)
+	}
+
+	return buf[:n]
+}
 
 func mustPrepareCertPool() *x509.CertPool {
 	readBytes, err := os.ReadFile(os.Getenv("CERTS_DIR"))
