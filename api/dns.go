@@ -27,8 +27,10 @@ Queries section:
   - Whatever you want to put in the query
 */
 func mustCreateDNSQuery(domainSegments []string) []byte {
-	id := uint16(rand.Intn(65535))
-	query := make([]byte, 0, 10)
+	id := uint16(rand.Intn(65535)) // To be within 8 bytes
+
+	minBytesNeeded := 16 // header 12 + QTYPE 2 + QCLASS 2
+	query := make([]byte, 0, minBytesNeeded)
 
 	// * Header Section (12 bytes)
 	// Transaction ID
@@ -58,7 +60,7 @@ func mustCreateDNSQuery(domainSegments []string) []byte {
 
 	// ARCOUNT -> number of RR in the Additional section.
 	// No additional records follow
-	query = append(query, 0x0000, 0x00)
+	query = append(query, 0x00, 0x00)
 
 	// * Question Section (Variable len)
 	// QNAME (Domain section)
@@ -146,16 +148,15 @@ func MustFetchDomainIp(domain string) net.IP {
 		pos += lenghtOfBytes + 1
 	}
 	pos += 1 // End of domain 0x00
-	pos += 4 // QType and QClass
+	pos += 4 // QType 2 + QClass 2
 
 	// Now starting Answer section
-	// Name, Type, Class, TTL
-	pos += 10
-	pos += 2 // Move forward for data length now
+	// Name 2, Type 2, Class 2, TTL 4, Data length 2
+	pos += 12
 	dataLen := binary.BigEndian.Uint16(response[pos-2 : pos])
 
 	if dataLen != 4 {
-		log.Fatalln("invalid ip address received - must be ipv4")
+		log.Fatalln("invalid ip address received from dns - must be ipv4")
 	}
 
 	ip := net.IPv4(response[pos], response[pos+1], response[pos+2], response[pos+3])
