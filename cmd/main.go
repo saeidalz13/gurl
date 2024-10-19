@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/saeidalz13/gurl/api"
+	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/stringutils"
 )
 
 func main() {
@@ -18,37 +20,10 @@ func main() {
 	_ = domainCmd.String("method", "GET", "HTTP method")
 	domainCmd.Parse(os.Args[2:])
 
-	// os.Args[1] will be domain string
-	destIp := api.MustFetchDomainIp(os.Args[1])
-	fmt.Println(destIp.String())
+	domain := os.Args[1]
+	domain, err := stringutils.TrimDomainPrefix(domain)
+	errutils.CheckErr(err)
 
-	// tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// defer tcpConn.Close()
-
-	// for {
-	// 	_, err := tcpConn.Write([]byte(`GET / HTTP/1.1\r\nHost: google.com\r\nUser-Agent: Client\r\n\r\n`))
-	// 	if err != nil {
-	// 		log.Printf("error write: %v\n", err)
-	// 		break
-	// 	}
-
-	// 	buf := make([]byte, 2048)
-	// 	n, err := tcpConn.Read(buf)
-	// 	if err != nil {
-	// 		if err.Error() == "EOF" {
-	// 			os.Exit(0)
-	// 		}
-
-	// 		log.Printf("error read: %v\n", err)
-	// 		continue
-	// 	}
-
-	// 	fmt.Println(string(buf[:n]))
-	// }
-
-	// 2. Make a TCP connection with the server
-	// This might involve TLS (Almost always it does)
+	destIp := api.MustFetchDomainIp(domain)
+	api.ExecGetHttpReq(destIp, domain)
 }

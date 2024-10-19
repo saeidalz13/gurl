@@ -86,7 +86,7 @@ func mustCreateDNSQuery(domainSegments []string) []byte {
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func MustFetchDomainIp(domain string) net.IP {
-	domainSegments, err := stringutils.PrepareDomainSegments(domain)
+	domainSegments, err := stringutils.SplitDomainIntoSegments(domain)
 	errutils.CheckErr(err)
 
 	dnsQuery := mustCreateDNSQuery(domainSegments)
