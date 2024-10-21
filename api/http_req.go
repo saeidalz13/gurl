@@ -20,8 +20,8 @@ type HTTPResponse struct {
 	body       string
 }
 
-func newHTTPResponse(response string) HTTPResponse {
-	responseSegments := strings.Split(response, "\r\n")
+func newHTTPResponse(tcpResponse string) HTTPResponse {
+	responseSegments := strings.Split(tcpResponse, "\r\n")
 	httpResp := HTTPResponse{
 		headers: make([]string, 0, 3),
 	}
@@ -61,18 +61,35 @@ func newHTTPResponse(response string) HTTPResponse {
 	return httpResp
 }
 
-func execHTTPReq(tlsConn *tls.Conn, httpRequest string, gp gurlParams) {
+func printPretty(httpResp HTTPResponse) {
+	fmt.Println("\n\033[1;37mStatus\033[0m")
+	fmt.Println("---------------------")
+	fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", httpResp.version)
+	fmt.Printf("\033[0;33mStatus Code\033[0m    | %s \n", httpResp.statusCode)
+	fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", httpResp.statusMsg)
+
+	fmt.Println("\n\033[1;37mHeaders\033[0m")
+	fmt.Println("---------------------")
+	for _, header := range httpResp.headers {
+		headerSegments := strings.Split(header, ":")
+		fmt.Printf("\033[0;36m%s\033[0m: %s\n", headerSegments[0], headerSegments[1])
+		// fmt.Println("")
+	}
+
+	fmt.Println("\n\033[1;37mBody\033[0m")
+	fmt.Println("---------------------")
+	fmt.Println(httpResp.body)
+}
+
+func execHTTPReq(tlsConn *tls.Conn, httpRequest string) {
 	if err := writeToTLSConn(tlsConn, []byte(httpRequest)); err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
 		return
 	}
 
-	readBytes := readFromTLSConn(tlsConn)
+	tcpRespBytes := readFromTLSConn(tlsConn)
+	tcpResponse := string(tcpRespBytes)
 
-	if gp.pretty {
-		httpResp := newHTTPResponse(string(readBytes))
-		fmt.Printf("%+v\n", httpResp)
-	} else {
-		fmt.Println(string(readBytes))
-	}
+	httpResp := newHTTPResponse(tcpResponse)
+	printPretty(httpResp)
 }

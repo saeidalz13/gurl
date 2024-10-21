@@ -51,5 +51,5 @@ func ExecGurl() {
 
 	httpRequest := createHTTPRequest(gp)
 
-	execHTTPReq(tlsConn, httpRequest, gp)
+	execHTTPReq(tlsConn, httpRequest)
 }
