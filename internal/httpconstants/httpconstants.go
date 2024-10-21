@@ -8,12 +8,12 @@ const (
 	MethodPUT    string = "PUT"
 )
 
-var ValidHttpMethods = []string{
-	MethodGET,
-	MethodPOST,
-	MethodPATCH,
-	MethodDELETE,
-	MethodPUT,
+var ValidHttpMethods = map[string]bool{
+	MethodGET:    true,
+	MethodPOST:   true,
+	MethodPATCH:  true,
+	MethodDELETE: true,
+	MethodPUT:    true,
 }
 
 const (

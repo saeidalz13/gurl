@@ -31,15 +31,13 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 	method := strings.TrimSpace(rawMethod)
 	method = strings.ToUpper(method)
 
-	for _, vm := range httpconstants.ValidHttpMethods {
-		if vm == method {
-			gp.method = method
-			return
-		}
+	_, ok := httpconstants.ValidHttpMethods[method]
+	if !ok {
+		fmt.Printf("invalid method: %s\n", method)
+		os.Exit(1)
 	}
 
-	fmt.Printf("invalid method: %s\n", method)
-	os.Exit(1)
+	gp.method = method
 }
 
 func newGurlParams(cp cliParams) gurlParams {
