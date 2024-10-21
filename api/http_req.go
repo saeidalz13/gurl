@@ -61,14 +61,18 @@ func newHTTPResponse(response string) HTTPResponse {
 	return httpResp
 }
 
-func execHTTPReq(tlsConn *tls.Conn, httpRequest string) {
+func execHTTPReq(tlsConn *tls.Conn, httpRequest string, gp gurlParams) {
 	if err := writeToTLSConn(tlsConn, []byte(httpRequest)); err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
 		return
 	}
 
 	readBytes := readFromTLSConn(tlsConn)
-	httpResp := newHTTPResponse(string(readBytes))
 
-	fmt.Printf("%+v\n", httpResp)
+	if gp.pretty {
+		httpResp := newHTTPResponse(string(readBytes))
+		fmt.Printf("%+v\n", httpResp)
+	} else {
+		fmt.Println(string(readBytes))
+	}
 }

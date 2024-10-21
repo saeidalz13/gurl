@@ -15,6 +15,9 @@ type gurlParams struct {
 	method  string
 	path    string
 	headers []string
+
+	// Aesthetics
+	pretty bool
 }
 
 func (gp *gurlParams) mustParseDomain() {
@@ -39,15 +42,17 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 	os.Exit(1)
 }
 
-func newGurlParams(rawMethod string, ctJson bool) gurlParams {
+func newGurlParams(cp cliParams) gurlParams {
 	gp := gurlParams{headers: make([]string, 0)}
 
-	if ctJson {
+	if cp.isHeaderJson {
 		gp.headers = append(gp.headers, "Content-Type: application/json")
 	}
 
+	gp.pretty = cp.isPretty
+
 	gp.mustParseDomain()
-	gp.mustParseMethod(rawMethod)
+	gp.mustParseMethod(cp.method)
 
 	return gp
 }
