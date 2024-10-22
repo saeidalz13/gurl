@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
+
+	"github.com/saeidalz13/gurl/internal/encodingutils"
 )
 
 /*
@@ -61,11 +63,29 @@ func newHTTPResponse(tcpResponse string) HTTPResponse {
 	return httpResp
 }
 
+func determineStatusCodeBashColor(statusCode string) string {
+	switch statusCode[0] {
+	case encodingutils.ASCII2:
+		return "\033[0;32m"
+
+	case encodingutils.ASCII3:
+		return "\033[0;36m"
+
+	case encodingutils.ASCII4:
+		return "\033[0;31m"
+
+	case encodingutils.ASCII5:
+		return "\033[0;35m"
+	}
+
+	return "\033[0;31m"
+}
+
 func printPretty(httpResp HTTPResponse) {
 	fmt.Println("\n\033[1;37mStatus\033[0m")
 	fmt.Println("---------------------")
 	fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", httpResp.version)
-	fmt.Printf("\033[0;33mStatus Code\033[0m    | %s \n", httpResp.statusCode)
+	fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", determineStatusCodeBashColor(httpResp.statusCode), httpResp.statusCode)
 	fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", httpResp.statusMsg)
 
 	fmt.Println("\n\033[1;37mHeaders\033[0m")
