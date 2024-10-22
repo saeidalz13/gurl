@@ -128,7 +128,23 @@ tcpLoop:
 			}
 
 		case HeaderChunk:
-			// TODO: to be implemented
+			bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
+			for _, line := range bytesLines {
+
+				// If "0" was found at the end of the body
+				// it shows that there's no more bytes to
+				// be sent from the server.
+				if bytes.Equal(line, []byte{48}) {
+					return response.Bytes()
+				}
+			}
+
+			// This is unncessary but to show explictely
+			// what needs to happen. If "0" was not found
+			// at the end of body, it means more data
+			// will be streamed from server. So tcpLoop
+			// shall live on!
+			continue tcpLoop
 		}
 	}
 
