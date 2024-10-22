@@ -1,6 +1,8 @@
 package api
 
 import (
+	"crypto/tls"
+	"fmt"
 	"strings"
 )
 
@@ -40,6 +42,19 @@ func createHTTPRequest(gp gurlParams) string {
 	sb.WriteString("\r\n")
 
 	return sb.String()
+}
+
+func execHTTPReq(tlsConn *tls.Conn, httpRequest string) {
+	if err := writeToTLSConn(tlsConn, []byte(httpRequest)); err != nil {
+		fmt.Printf("write tcp read: %v\n", err)
+		return
+	}
+
+	tcpRespBytes := readFromTLSConn(tlsConn)
+	tcpResponse := string(tcpRespBytes)
+
+	httpResp := newHTTPResponse(tcpResponse)
+	printPretty(httpResp)
 }
 
 func ExecGurl() {

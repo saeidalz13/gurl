@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/tls"
 	"fmt"
 	"strings"
 
@@ -99,17 +98,4 @@ func printPretty(httpResp HTTPResponse) {
 	fmt.Println("\n\033[1;37mBody\033[0m")
 	fmt.Println("---------------------")
 	fmt.Println(httpResp.body)
-}
-
-func execHTTPReq(tlsConn *tls.Conn, httpRequest string) {
-	if err := writeToTLSConn(tlsConn, []byte(httpRequest)); err != nil {
-		fmt.Printf("write tcp read: %v\n", err)
-		return
-	}
-
-	tcpRespBytes := readFromTLSConn(tlsConn)
-	tcpResponse := string(tcpRespBytes)
-
-	httpResp := newHTTPResponse(tcpResponse)
-	printPretty(httpResp)
 }
