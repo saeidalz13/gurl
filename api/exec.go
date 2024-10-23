@@ -7,7 +7,8 @@ import (
 )
 
 func handleHTTPSReq(conn *tls.Conn, httpRequest string) {
-	if err := writeToTLSConn(conn, []byte(httpRequest)); err != nil {
+	_, err := conn.Write([]byte(httpRequest))
+	if err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
 		os.Exit(1)
 	}
@@ -18,11 +19,11 @@ func handleHTTPSReq(conn *tls.Conn, httpRequest string) {
 }
 
 func handleWSSReq(conn *tls.Conn, wsRequest string) {
-	if err := writeToTLSConn(conn, []byte(wsRequest)); err != nil {
+	_, err := conn.Write([]byte(wsRequest))
+	if err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
 		os.Exit(1)
 	}
-
 	readFromTLSConnWSS(conn)
 }
 
@@ -47,7 +48,8 @@ func execInSecure(gp gurlParams) {
 
 	if gp.isWs {
 		wsRequest := mustCreateWsRequest(gp.path, gp.domain)
-		manageTCPConnWS(tcpConn, []byte(wsRequest))
+		go manageReadTCPConnWS(tcpConn)
+		manageWriteTCPConnWS(tcpConn, []byte(wsRequest))
 	}
 }
 

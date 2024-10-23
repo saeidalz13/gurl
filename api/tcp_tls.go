@@ -14,6 +14,7 @@ import (
 
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
+	"github.com/saeidalz13/gurl/internal/wsutils"
 )
 
 const (
@@ -21,11 +22,6 @@ const (
 	HeaderChunk
 	HeaderContentLength
 )
-
-func writeToTLSConn(tlsConn *tls.Conn, b []byte) error {
-	_, err := tlsConn.Write(b)
-	return err
-}
 
 // Identifies which parameter exists in the
 // http response header so we know if we should
@@ -132,7 +128,6 @@ tcpLoop:
 		case HeaderChunk:
 			bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
 			for _, line := range bytesLines {
-
 				// If "0" was found at the end of the body
 				// it shows that there's no more bytes to
 				// be sent from the server.
@@ -175,19 +170,15 @@ func readFromTLSConnWSS(tlsConn *tls.Conn) {
 	}
 }
 
-func manageTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
-	var headerIteration = true
+// Reads the content of websocket frame stream
+// on a separate goroutine to be able to both
+// read from and write to TCP conn concurrently.
+func manageReadTCPConnWS(tcpConn *net.TCPConn) {
+	headerIteration := true
 
 	for {
-		_, err := tcpConn.Write(msgByte)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
 		buf := make([]byte, 2<<15)
 		n, err := tcpConn.Read(buf)
-
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
@@ -204,7 +195,6 @@ func manageTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
 
 		if headerIteration {
 			respHeader := string(buf[:n])
-			fmt.Println(respHeader)
 			// 101 is code for switching protocol showing
 			// that server is ready to be serving WS
 			if !strings.Contains(respHeader, "101") {
@@ -212,19 +202,38 @@ func manageTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
 				os.Exit(1)
 			}
 			headerIteration = false
+
 		} else {
-			fmt.Println(string(buf[:n]))
+			payload, err := wsutils.ParseWsFrame(buf[:n])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(string(payload))
+		}
+	}
+}
+
+func manageWriteTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
+	for {
+		_, err := tcpConn.Write(msgByte)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
 		}
 
 		// Now asking from the user for WebSocket message
 		// to send to the server
 		reader := bufio.NewReader(os.Stdin)
 		var buffer bytes.Buffer
+
+	stdInLoop:
 		for {
 			line, err := reader.ReadBytes('\n')
 			errutils.CheckErr(err)
+
 			if len(bytes.TrimSpace(line)) == 0 {
-				break
+				break stdInLoop
 			}
 
 			buffer.Write(line)
@@ -269,7 +278,10 @@ func makeTcpConn(ip net.IP, port int) *net.TCPConn {
 	tcpConn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: ip, Port: port})
 	errutils.CheckErr(err)
 
-	tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	// We want to keep the read as blocking on another
+	// goroutine. So no deadline for it.
+	// tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
 	tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
 	return tcpConn
