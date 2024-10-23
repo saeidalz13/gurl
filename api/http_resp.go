@@ -81,19 +81,21 @@ func determineStatusCodeBashColor(statusCode string) string {
 	return "\033[0;31m"
 }
 
-func printPretty(httpResp HTTPResponse) {
-	fmt.Println("\n\033[1;37mStatus\033[0m")
-	fmt.Println("---------------------")
-	fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", httpResp.version)
-	fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", determineStatusCodeBashColor(httpResp.statusCode), httpResp.statusCode)
-	fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", httpResp.statusMsg)
+func printPretty(httpResp HTTPResponse, verbose bool) {
+	if verbose {
+		fmt.Println("\n\033[1;37mStatus\033[0m")
+		fmt.Println("---------------------")
+		fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", httpResp.version)
+		fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", determineStatusCodeBashColor(httpResp.statusCode), httpResp.statusCode)
+		fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", httpResp.statusMsg)
 
-	fmt.Println("\n\033[1;37mHeaders\033[0m")
-	fmt.Println("---------------------")
-	for _, header := range httpResp.headers {
-		headerSegments := strings.Split(header, ":")
-		fmt.Printf("\033[0;36m%s\033[0m: %s\n", headerSegments[0], headerSegments[1])
-		// fmt.Println("")
+		fmt.Println("\n\033[1;37mHeaders\033[0m")
+		fmt.Println("---------------------")
+		for _, header := range httpResp.headers {
+			headerSegments := strings.Split(header, ":")
+			fmt.Printf("\033[0;36m%s\033[0m: %s\n", headerSegments[0], headerSegments[1])
+			// fmt.Println("")
+		}
 	}
 
 	fmt.Println("\n\033[1;37mBody\033[0m")

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func handleHTTPSReq(conn *tls.Conn, httpRequest string) {
+func handleHTTPSReq(conn *tls.Conn, httpRequest string, verbose bool) {
 	_, err := conn.Write([]byte(httpRequest))
 	if err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
@@ -15,7 +15,7 @@ func handleHTTPSReq(conn *tls.Conn, httpRequest string) {
 
 	tcpRespBytes := readFromTLSConnHTTPS(conn)
 	httpResp := newHTTPResponse(string(tcpRespBytes))
-	printPretty(httpResp)
+	printPretty(httpResp, verbose)
 }
 
 func handleWSSReq(conn *tls.Conn, wsRequest string) {
@@ -36,7 +36,7 @@ func execSecure(gp gurlParams) {
 		handleWSSReq(tlsConn, wsRequest)
 	} else {
 		httpRequest := createHTTPRequest(gp)
-		handleHTTPSReq(tlsConn, httpRequest)
+		handleHTTPSReq(tlsConn, httpRequest, gp.verbose)
 	}
 }
 

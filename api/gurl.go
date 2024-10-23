@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/stringutils"
@@ -18,20 +19,18 @@ type gurlParams struct {
 	method  string
 	path    string
 	headers []string
+	verbose bool
 
 	// Is this a WebSocket request
 	isWs       bool
 	wsProtocol uint8
 
-	// Aesthetics
-	pretty bool
-
 	// Server info
 	serverIP net.IP
 	port     int
 
-	//
-	isConnTls bool
+	isConnTls  bool
+	ipCacheDir string
 }
 
 func (gp *gurlParams) mustParseDomainHTTP() {
@@ -69,10 +68,12 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 }
 
 func newGurlParams() gurlParams {
+	ipCacheDir := appconstants.MustMakeIpCacheDir()
+
 	domainCmd := flag.NewFlagSet("domain", flag.ExitOnError)
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
-	ctJsonPtr := domainCmd.Bool("json", false, "Set Header -> Content-Type: application/json")
-	isPrettyPtr := domainCmd.Bool("pretty", false, "Print the response in an organized manner")
+	ctJsonPtr := domainCmd.Bool("json", false, "Add HTTP Request Header -> Content-Type: application/json")
+	verbose := domainCmd.Bool("v", false, "Prints metadata and steps of request")
 	isWs := domainCmd.Bool("ws", false, "Makes a WebSocket request")
 	if len(os.Args) < 2 {
 		fmt.Println("must provide domain name")
@@ -82,9 +83,10 @@ func newGurlParams() gurlParams {
 	domainCmd.Parse(os.Args[2:])
 
 	gp := gurlParams{
-		headers: make([]string, 0),
-		isWs:    *isWs,
-		pretty:  *isPrettyPtr,
+		headers:    make([]string, 0),
+		isWs:       *isWs,
+		verbose:    *verbose,
+		ipCacheDir: ipCacheDir,
 	}
 
 	if *ctJsonPtr {
@@ -106,7 +108,14 @@ func newGurlParams() gurlParams {
 		gp.port = port
 		gp.isConnTls = false
 	} else {
-		ip := mustFetchDomainIp(gp.domain)
+		ip, err := fetchCachedIp(ipCacheDir, gp.domain)
+		if err != nil {
+			ip = mustFetchDomainIp(gp.domain)
+			if err := cacheDomainIp(ipCacheDir, gp.domain, ip.String()); err != nil {
+				fmt.Println("failed to cache ip")
+			}
+		}
+
 		gp.serverIP = ip
 		gp.isConnTls = true
 	}

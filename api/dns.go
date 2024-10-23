@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
@@ -161,4 +163,54 @@ func mustFetchDomainIp(domain string) net.IP {
 
 	ip := net.IPv4(response[pos], response[pos+1], response[pos+2], response[pos+3])
 	return ip
+}
+
+func fetchCachedIp(ipCacheDir, domain string) (net.IP, error) {
+	domainFile := filepath.Join(ipCacheDir, domain)
+	f, err := os.OpenFile(domainFile, os.O_RDONLY, 0o600)
+	if err != nil {
+		return nil, err
+	}
+
+	// ip v4 string is xxx.xxx.xxx.xxx
+	// max is 4*3 bytes + 3 dots (bytes) = 15 bytes
+	buf := make([]byte, 15)
+	n, err := f.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	ipStrSegments := strings.Split(string(buf[:n]), ".")
+	ipBytes := make([]byte, 0, 4)
+
+	for _, b := range ipStrSegments {
+		n, err := strconv.Atoi(b)
+		if err != nil {
+			return nil, err
+		}
+
+		if n < 0 || n > 255 {
+			return nil, fmt.Errorf("ip segment > 255 or < 0: %d", n)
+		}
+
+		ipBytes = append(ipBytes, byte(n))
+	}
+
+	if len(ipBytes) != 4 {
+		return nil, fmt.Errorf("cached ip is incorrect")
+	}
+
+	return net.IPv4(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]), nil
+}
+
+func cacheDomainIp(ipCacheDir, domain, ipStr string) error {
+	domainFile := filepath.Join(ipCacheDir, domain)
+	// 0o600 read and write permissions only for the owner
+	f, err := os.OpenFile(domainFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString(ipStr)
+	return err
 }
