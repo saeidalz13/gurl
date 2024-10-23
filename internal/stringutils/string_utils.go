@@ -2,7 +2,10 @@ package stringutils
 
 import (
 	"errors"
+	"strconv"
 	"strings"
+
+	"github.com/saeidalz13/gurl/internal/wsutils"
 )
 
 func SplitDomainIntoSegments(domain string) ([]string, error) {
@@ -15,7 +18,6 @@ func SplitDomainIntoSegments(domain string) ([]string, error) {
 }
 
 func TrimDomainPrefix(domain string) (string, error) {
-	domain = strings.TrimSpace(domain)
 	domain = strings.TrimPrefix(domain, "http://")
 	domain = strings.TrimPrefix(domain, "https://")
 	domain = strings.TrimPrefix(domain, "www.")
@@ -27,7 +29,7 @@ func TrimDomainPrefix(domain string) (string, error) {
 	return domain, nil
 }
 
-// Returns domain and path from the raw domain 
+// Returns domain and path from the raw domain
 // provided by user.
 func ExtractPathFromDomain(domain string) (string, string) {
 	segments := strings.SplitN(domain, "/", 2)
@@ -37,4 +39,36 @@ func ExtractPathFromDomain(domain string) (string, string) {
 	}
 
 	return segments[0], "/" + segments[1]
+}
+
+func ExtractWsProtocol(domain string) (uint8, string, error) {
+	after, found := strings.CutPrefix(domain, "ws://")
+	if found {
+		return wsutils.ProtocolWS, after, nil
+	}
+
+	after, found = strings.CutPrefix(domain, "wss://")
+	if found {
+		return wsutils.ProtocolWSS, after, nil
+	}
+
+	return 255, "", errors.New("if websocket, input domain must contain protocol: ws:// or wss://")
+}
+
+func TrimDomainSpace(domain string) string {
+	return strings.TrimSpace(domain)
+}
+
+func IsDomainLocalHost(domain string) bool {
+	return strings.Contains(domain, "localhost") || strings.Contains(domain, "127.0.0.1")
+}
+
+func ExtractPort(domain string) (int, error) {
+	domainSegments := strings.Split(domain, ":")
+
+	if len(domainSegments) != 2 {
+		return 0, errors.New("domain must be in format of ip:port")
+	}
+
+	return strconv.Atoi(domainSegments[1])
 }

@@ -1,10 +1,12 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -52,7 +54,7 @@ func identifyHeaderParam(bufContainingHeader []byte) uint8 {
 // If none of those options provided, that means the
 // entire data is sent in one single stream and we can
 // close the TCP conn after the first read.
-func readFromTLSConn(tlsConn *tls.Conn) []byte {
+func readFromTLSConnHTTPS(tlsConn *tls.Conn) []byte {
 	var response bytes.Buffer
 	var readContentLength int = -1
 	var contentLength int
@@ -151,6 +153,87 @@ tcpLoop:
 	return response.Bytes()
 }
 
+func readFromTLSConnWSS(tlsConn *tls.Conn) {
+	for {
+		buf := make([]byte, 2<<10)
+		n, err := tlsConn.Read(buf)
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+
+			if strings.Contains(err.Error(), "i/o timeout") {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("error read: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println(buf[:n])
+	}
+}
+
+func manageTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
+	var headerIteration = true
+
+	for {
+		_, err := tcpConn.Write(msgByte)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		buf := make([]byte, 2<<15)
+		n, err := tcpConn.Read(buf)
+
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+
+			if strings.Contains(err.Error(), "i/o timeout") {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("error read: %v\n", err)
+			os.Exit(1)
+		}
+
+		if headerIteration {
+			respHeader := string(buf[:n])
+			fmt.Println(respHeader)
+			// 101 is code for switching protocol showing
+			// that server is ready to be serving WS
+			if !strings.Contains(respHeader, "101") {
+				fmt.Println(respHeader)
+				os.Exit(1)
+			}
+			headerIteration = false
+		} else {
+			fmt.Println(string(buf[:n]))
+		}
+
+		// Now asking from the user for WebSocket message
+		// to send to the server
+		reader := bufio.NewReader(os.Stdin)
+		var buffer bytes.Buffer
+		for {
+			line, err := reader.ReadBytes('\n')
+			errutils.CheckErr(err)
+			if len(bytes.TrimSpace(line)) == 0 {
+				break
+			}
+
+			buffer.Write(line)
+		}
+
+		msgByte = buffer.Bytes()
+	}
+}
+
 func mustPrepareCertPool() *x509.CertPool {
 	readBytes, err := os.ReadFile(os.Getenv("CERTS_DIR"))
 	errutils.CheckErr(err)
@@ -166,7 +249,7 @@ func mustPrepareCertPool() *x509.CertPool {
 	return certPool
 }
 
-func initTlsConn(ip, domain string) *tls.Conn {
+func makeTlsTcpConn(ip, domain string) *tls.Conn {
 	certPool := mustPrepareCertPool()
 
 	tlsConn, err := tls.Dial(
@@ -180,4 +263,14 @@ func initTlsConn(ip, domain string) *tls.Conn {
 	tlsConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
 	return tlsConn
+}
+
+func makeTcpConn(ip net.IP, port int) *net.TCPConn {
+	tcpConn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: ip, Port: port})
+	errutils.CheckErr(err)
+
+	tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+
+	return tcpConn
 }
