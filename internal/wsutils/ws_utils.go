@@ -116,7 +116,7 @@ func ParseWsFrame(frame []byte) ([]byte, error) {
 	// is more, the key is used in a cyclic manner.
 	if isMasked {
 		for i := 0; i < payloadLen; i++ {
-			// ^= is XOR sign
+			// ^ is XOR sign
 			payload[i] ^= maskKey[i%4]
 		}
 	}
