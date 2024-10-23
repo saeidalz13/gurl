@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/saeidalz13/gurl/internal/bashutils"
 	"github.com/saeidalz13/gurl/internal/encodingutils"
 )
 
@@ -65,16 +66,16 @@ func newHTTPResponse(tcpResponse string) HTTPResponse {
 func determineStatusCodeBashColor(statusCode string) string {
 	switch statusCode[0] {
 	case encodingutils.ASCII2:
-		return "\033[0;32m"
+		return bashutils.BoldGreen
 
 	case encodingutils.ASCII3:
-		return "\033[0;36m"
+		return bashutils.BoldCyan
 
 	case encodingutils.ASCII4:
-		return "\033[0;31m"
+		return bashutils.BoldRed
 
 	case encodingutils.ASCII5:
-		return "\033[0;35m"
+		return bashutils.BoldPurple
 	}
 
 	return "\033[0;31m"

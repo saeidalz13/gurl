@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/saeidalz13/gurl/internal/bashutils"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/wsutils"
@@ -209,9 +210,12 @@ func manageReadTCPConnWS(tcpConn *net.TCPConn) {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Println(string(payload))
+			bashutils.PrintWsServerMsg(string(payload))
 		}
 	}
+
+	fmt.Println("Server closed connection")
+	os.Exit(1)
 }
 
 func manageWriteTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
@@ -222,24 +226,11 @@ func manageWriteTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
 			os.Exit(1)
 		}
 
-		// Now asking from the user for WebSocket message
-		// to send to the server
-		reader := bufio.NewReader(os.Stdin)
-		var buffer bytes.Buffer
+		input := getWsInputFromStdin()
+		bashutils.PrintWsClientMsg(string(input))
 
-	stdInLoop:
-		for {
-			line, err := reader.ReadBytes('\n')
-			errutils.CheckErr(err)
-
-			if len(bytes.TrimSpace(line)) == 0 {
-				break stdInLoop
-			}
-
-			buffer.Write(line)
-		}
-
-		msgByte = buffer.Bytes()
+		frame := wsutils.CreateWsFrame(input)
+		msgByte = frame
 	}
 }
 
@@ -281,8 +272,43 @@ func makeTcpConn(ip net.IP, port int) *net.TCPConn {
 	// We want to keep the read as blocking on another
 	// goroutine. So no deadline for it.
 	// tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-
-	tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	// tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
 	return tcpConn
+}
+
+func getWsInputFromStdin() []byte {
+	// If we use fmt.Scanln(), then it only reads
+	// the characters until the space. bufio lets
+	// us consider all the characters until the
+	// delimiter we decide. We choose '\n' that
+	// shows the end of the input.
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		rawInput, err := reader.ReadString('\n')
+		if err != nil {
+			bashutils.PrintWsError(err.Error())
+			continue
+		}
+
+		// Trim spaces and newlines from the input
+		rawInput = strings.TrimSpace(rawInput)
+
+		// Check if the input is empty or contains only spaces
+		if len(rawInput) == 0 {
+			bashutils.PrintWsError("empty input!")
+			continue
+		}
+
+		// Remove spaces within the input
+		modInput := make([]byte, 0, len(rawInput))
+		for _, b := range []byte(rawInput) {
+			if b != ' ' {
+				modInput = append(modInput, b)
+			}
+		}
+
+		return modInput
+	}
 }

@@ -1,8 +1,10 @@
 package wsutils
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
 )
 
 const (
@@ -120,4 +122,35 @@ func ParseWsFrame(frame []byte) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+func CreateWsFrame(payload []byte) []byte {
+	payloadLen := len(payload)
+	if payloadLen > 125 {
+		fmt.Println("for now it's too long of a payload")
+		os.Exit(1)
+	}
+
+	var frame bytes.Buffer
+	// FIN + RSV (1 2 3) + OPCODE (1 is for text)
+	// TODO: Adding feature for other types of messages
+	firstByte := byte(0b10000001)
+	frame.WriteByte(firstByte)
+
+	// MASK + len of payload
+	secondByte := byte(0b10000000 | payloadLen)
+	// masking
+	maskingKey := []byte{0x37, 0xfa, 0x21, 0x3d}
+	for i := range payload {
+		payload[i] ^= maskingKey[i%4]
+	}
+	frame.WriteByte(secondByte)
+
+	// Add the masking key to frame
+	frame.Write(maskingKey)
+
+	// Append the payload to the end of the frame
+	frame.Write(payload)
+
+	return frame.Bytes()
 }
