@@ -51,11 +51,44 @@ func (hr HTTPResponse) determineStatusCodeBashColor() string {
 	return "\033[0;31m"
 }
 
+// In case of Transfer-Encoding: chunked, there will be
+// two integers at the beginning and end of JSON resp.
+// these 2 should be removed for aesthetics
+func (hr HTTPResponse) trimJsonResp(body string) string {
+	for _, header := range hr.headers {
+		headerSegments := strings.Split(header, ":")
+
+		if strings.TrimSpace(headerSegments[1]) == "chunked" {
+			// the first characters until reaching "{"
+			// are certainly ASCII
+			var jsonStartIdx int
+		strStartLoop:
+			for i, char := range body {
+				if char == '{' {
+					jsonStartIdx = i
+					break strStartLoop
+				}
+			}
+
+			// '0' will exist at the end of the
+			// resp so we should remove that too.
+			// This indicates the end of the resp
+			// as a part of HTTP standards.
+			extra0CharIdx := len(body) - 1
+			return body[jsonStartIdx:extra0CharIdx]
+		}
+	}
+
+	return body
+}
+
 func (hr HTTPResponse) parse() HTTPResponse {
 	var bodyIdx int
+	statusLineNum := 0
+
 	for i, segment := range hr.responseSegments {
 		// First line is always the status line
-		if i == 0 {
+		if i == statusLineNum {
 			statusLineSegments := strings.Split(segment, " ")
 			hr.version = statusLineSegments[0]
 			hr.statusCode = statusLineSegments[1]
@@ -82,7 +115,7 @@ func (hr HTTPResponse) parse() HTTPResponse {
 		sb.WriteString(seg)
 	}
 
-	hr.body = sb.String()
+	hr.body = hr.trimJsonResp(sb.String())
 
 	return hr
 }
