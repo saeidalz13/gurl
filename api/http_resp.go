@@ -122,22 +122,22 @@ func (hr HTTPResponse) parse() HTTPResponse {
 
 func (hr HTTPResponse) printPretty(verbose bool) {
 	if verbose {
-		fmt.Println("\n\033[1;37mStatus\033[0m")
+		fmt.Printf("\n%sStatus%s\n", terminalutils.BoldYellow, terminalutils.FormatReset)
 		fmt.Println("---------------------")
-		fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", hr.version)
-		fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", hr.determineStatusCodeBashColor(), hr.statusCode)
-		fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", hr.statusMsg)
+		fmt.Printf("%sHTTP Version%s   | %s \n", terminalutils.RegularYellow, terminalutils.FormatReset, hr.version)
+		fmt.Printf("%sStatus Code    | %s%s\n", terminalutils.RegularYellow, hr.determineStatusCodeBashColor(), hr.statusCode)
+		fmt.Printf("%sStatus Message%s | %s \n", terminalutils.RegularYellow, terminalutils.FormatReset, hr.statusMsg)
 
-		fmt.Println("\n\033[1;37mHeaders\033[0m")
+		fmt.Printf("\n%sHeaders%s\n", terminalutils.BoldCyan, terminalutils.FormatReset)
 		fmt.Println("---------------------")
 		for _, header := range hr.headers {
 			headerSegments := strings.Split(header, ":")
-			fmt.Printf("\033[0;36m%s\033[0m: %s\n", headerSegments[0], headerSegments[1])
+			fmt.Printf("%s%s%s: %s\n", terminalutils.RegularCyan, headerSegments[0], terminalutils.FormatReset, headerSegments[1])
 			// fmt.Println("")
 		}
 	}
 
-	fmt.Println("\n\033[1;37mBody\033[0m")
+	fmt.Printf("\n%sBody%s\n", terminalutils.BoldGreen, terminalutils.FormatReset)
 	fmt.Println("---------------------")
 	fmt.Println(hr.body)
 }
