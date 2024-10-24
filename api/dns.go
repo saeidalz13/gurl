@@ -6,12 +6,19 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"os"
 	"strings"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/stringutils"
 )
+
+type DNSResolver struct {
+	domain string
+}
+
+func newDNSResolver(domain string) DNSResolver {
+	return DNSResolver{domain}
+}
 
 /*
 Header sections
@@ -26,7 +33,7 @@ Header sections
 Queries section:
   - Whatever you want to put in the query
 */
-func mustCreateDNSQuery(domainSegments []string) []byte {
+func (dr DNSResolver) createDNSQuery(domainSegments []string) ([]byte, error) {
 	id := uint16(rand.Intn(65535)) // To be within 8 bytes
 
 	minBytesNeeded := 16 // header 12 + QTYPE 2 + QCLASS 2
@@ -67,8 +74,7 @@ func mustCreateDNSQuery(domainSegments []string) []byte {
 	for _, part := range domainSegments {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
-			fmt.Println("invalid input domain")
-			os.Exit(1)
+			return nil, fmt.Errorf("invalid input domain")
 		}
 		// Each label prefixed by a length byte, followed by the label itself
 		query = append(query, byte(len(part)))
@@ -82,16 +88,17 @@ func mustCreateDNSQuery(domainSegments []string) []byte {
 	// QCLASS -> Class IN (Internet) - 2 bytes
 	query = append(query, 0x00, 0x01)
 
-	return query
+	return query, nil
 }
 
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
-func mustObtainIPFromDNS(domain string) net.IP {
-	domainSegments, err := stringutils.SplitDomainIntoSegments(domain)
+func (dr DNSResolver) mustResolveIP() net.IP {
+	domainSegments, err := stringutils.SplitDomainIntoSegments(dr.domain)
 	errutils.CheckErr(err)
 
-	dnsQuery := mustCreateDNSQuery(domainSegments)
+	dnsQuery, err := dr.createDNSQuery(domainSegments)
+	errutils.CheckErr(err)
 
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
 	errutils.CheckErr(err)
@@ -139,7 +146,7 @@ func mustObtainIPFromDNS(domain string) net.IP {
 	}
 
 	pos := 12
-	endQNameValue := 0x00
+	endQNameValue := 0
 	for int(response[pos]) != endQNameValue {
 		// Move by length of each label + 1 for the length byte
 		// Each label prefixed by a length byte, followed by the label itself

@@ -102,10 +102,10 @@ func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
 	// unnecessary network I/O.
 	ip, err := ram.fetchCachedIp()
 	if err != nil {
-		ip = mustObtainIPFromDNS(ram.domain)
+		ip = newDNSResolver(ram.domain).mustResolveIP()
 		if err := ram.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
-			fmt.Printf("failed to cache ip: %v\n", err)
+			fmt.Printf("skipped ip caching: %v\n", err)
 		}
 	}
 	return ip, httpconstants.PortHTTPS, true
