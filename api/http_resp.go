@@ -24,7 +24,7 @@ type HTTPResponse struct {
 	responseSegments []string
 }
 
-func newHTTPResponse(respBytes []byte) HTTPResponse {
+func newHTTPResponseParser(respBytes []byte) HTTPResponse {
 	responseSegments := strings.Split(string(respBytes), "\r\n")
 	httpResp := HTTPResponse{
 		headers:          make([]string, 0, 3),

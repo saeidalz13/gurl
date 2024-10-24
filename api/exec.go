@@ -16,7 +16,7 @@ func ExecGurl() {
 	gp := newGurlParams()
 
 	// Fetching IP and port of the remote address.
-	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, gp.domain).determineRemoteIpPort()
+	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, gp.domain).resolveConnectionInfo()
 
 	// Initializing the TCP connection manager for
 	// TCP conn and its management.
@@ -27,12 +27,12 @@ func ExecGurl() {
 	if gp.isWs {
 		wsRequest, err := createWsRequest(gp.path, gp.domain)
 		errutils.CheckErr(err)
-		go tcm.manageReadTCPConnWS()
-		tcm.manageWriteTCPConnWS([]byte(wsRequest))
+		go tcm.readWebSocketData()
+		tcm.writeWebSocketData([]byte(wsRequest))
+
 	} else {
-		tcm.setDeadlineToConn()
-		httpRequest := createHTTPRequest(gp)
-		respBytes := tcm.makeHTTPRequest(httpRequest)
-		newHTTPResponse(respBytes).parse().printPretty(gp.verbose)
+		httpRequest := newHTTPRequestCreator(gp.domain, gp.path, gp.method, gp.headers).create()
+		respBytes := tcm.dispatchHTTPRequest(httpRequest)
+		newHTTPResponseParser(respBytes).parse().printPretty(gp.verbose)
 	}
 }

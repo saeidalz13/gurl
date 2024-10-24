@@ -4,16 +4,32 @@ import (
 	"strings"
 )
 
-func createHTTPRequest(gp gurlParams) string {
+type HTTPRequest struct {
+	domain  string
+	path    string
+	method  string
+	headers []string
+}
+
+func newHTTPRequestCreator(domain, path, method string, headers []string) HTTPRequest {
+	return HTTPRequest{
+		domain:  domain,
+		path:    path,
+		method:  method,
+		headers: headers,
+	}
+}
+
+func (h HTTPRequest) create() string {
 	sb := strings.Builder{}
 	sb.Grow(50)
 
 	// Method
-	sb.WriteString(gp.method)
+	sb.WriteString(h.method)
 	sb.WriteString(" ")
 
 	// Path
-	sb.WriteString(gp.path)
+	sb.WriteString(h.path)
 	sb.WriteString(" ")
 
 	// Protocol and version
@@ -21,7 +37,7 @@ func createHTTPRequest(gp gurlParams) string {
 
 	// Host
 	sb.WriteString("Host: ")
-	sb.WriteString(gp.domain)
+	sb.WriteString(h.domain)
 	sb.WriteString("\r\n")
 
 	// User-Agent
@@ -31,7 +47,7 @@ func createHTTPRequest(gp gurlParams) string {
 	sb.WriteString("Accept: */*\r\n")
 
 	// User Headers
-	for _, header := range gp.headers {
+	for _, header := range h.headers {
 		sb.WriteString(header)
 		sb.WriteString("\r\n")
 	}

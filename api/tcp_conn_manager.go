@@ -70,7 +70,9 @@ func (tcm *TCPConnManager) initTCPConn(gp gurlParams) error {
 
 // Write the prepare http request to TCP connection
 // and returns the response bytes.
-func (tcm TCPConnManager) makeHTTPRequest(httpRequest string) []byte {
+func (tcm TCPConnManager) dispatchHTTPRequest(httpRequest string) []byte {
+	tcm.setDeadlineToConn()
+
 	_, err := tcm.conn.Write([]byte(httpRequest))
 	if err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
@@ -201,7 +203,7 @@ tcpLoop:
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
-func (tcm TCPConnManager) manageReadTCPConnWS() {
+func (tcm TCPConnManager) readWebSocketData() {
 	headerIteration := true
 
 	for {
@@ -245,7 +247,7 @@ func (tcm TCPConnManager) manageReadTCPConnWS() {
 	os.Exit(1)
 }
 
-func (tcm TCPConnManager) manageWriteTCPConnWS(msgByte []byte) {
+func (tcm TCPConnManager) writeWebSocketData(msgByte []byte) {
 	for {
 		_, err := tcm.conn.Write(msgByte)
 		if err != nil {

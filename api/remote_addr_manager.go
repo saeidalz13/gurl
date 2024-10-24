@@ -89,7 +89,7 @@ func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
 }
 
 // bool shows if the connection should be TLS
-func (ram RemoteAddrManager) determineRemoteIpPort() (net.IP, int, bool) {
+func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
 	if ram.isDomainLocalHost() {
 		ip := net.IPv4(127, 0, 0, 1)
 		port, err := ram.extractPort()
