@@ -11,7 +11,7 @@ import (
 	"github.com/saeidalz13/gurl/internal/stringutils"
 )
 
-type gurlParams struct {
+type httpWsParams struct {
 	// Http
 	domain  string
 	method  string
@@ -24,24 +24,24 @@ type gurlParams struct {
 	wsProtocol uint8
 }
 
-func (gp *gurlParams) mustParseDomainHTTP(domain string) {
+func (hwp *httpWsParams) mustParseDomainHTTP(domain string) {
 	domain, err := stringutils.TrimDomainPrefix(domain)
 	errutils.CheckErr(err)
-	gp.domain, gp.path = stringutils.ExtractPathFromDomain(domain)
+	hwp.domain, hwp.path = stringutils.ExtractPathFromDomain(domain)
 }
 
-func (gp *gurlParams) mustParseDomainWS(domain string) {
+func (hwp *httpWsParams) mustParseDomainWS(domain string) {
 	wsProtocol, trimmedDomain, err := stringutils.ExtractWsProtocol(domain)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	gp.wsProtocol = wsProtocol
-	gp.domain, gp.path = stringutils.ExtractPathFromDomain(trimmedDomain)
+	hwp.wsProtocol = wsProtocol
+	hwp.domain, hwp.path = stringutils.ExtractPathFromDomain(trimmedDomain)
 }
 
-func (gp *gurlParams) mustParseMethod(rawMethod string) {
+func (hwp *httpWsParams) mustParseMethod(rawMethod string) {
 	method := strings.TrimSpace(rawMethod)
 	method = strings.ToUpper(method)
 
@@ -51,10 +51,10 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 		os.Exit(1)
 	}
 
-	gp.method = method
+	hwp.method = method
 }
 
-func (gp *gurlParams) parseDomain() {
+func (hwp *httpWsParams) parseDomain() {
 	domain := os.Args[1]
 	domain = stringutils.TrimDomainSpace(domain)
 
@@ -62,22 +62,22 @@ func (gp *gurlParams) parseDomain() {
 	// User MUST include the procotol in the input
 	// domain for websocket requests.
 	// (ws:// or wss://)
-	gp.isWs = stringutils.IsDomainForWebsocket(domain)
+	hwp.isWs = stringutils.IsDomainForWebsocket(domain)
 
-	if gp.isWs {
-		gp.mustParseDomainWS(domain)
+	if hwp.isWs {
+		hwp.mustParseDomainWS(domain)
 	} else {
-		gp.mustParseDomainHTTP(domain)
+		hwp.mustParseDomainHTTP(domain)
 	}
 }
 
-func (gp *gurlParams) adjustHeaders(contentLengthJson bool) {
+func (hwp *httpWsParams) adjustHeaders(contentLengthJson bool) {
 	if contentLengthJson {
-		gp.headers = append(gp.headers, "Content-Type: application/json")
+		hwp.headers = append(hwp.headers, "Content-Type: application/json")
 	}
 }
 
-func newGurlParams() gurlParams {
+func newHTTPWSParams() httpWsParams {
 	// CLI init section
 	domainCmd := flag.NewFlagSet("domain", flag.ExitOnError)
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
@@ -91,14 +91,14 @@ func newGurlParams() gurlParams {
 	domainCmd.Parse(os.Args[2:])
 
 	// Initialize gurlParams struct
-	gp := gurlParams{
+	hwp := httpWsParams{
 		headers: make([]string, 0),
 		verbose: *verbose,
 	}
 
-	gp.parseDomain()
-	gp.mustParseMethod(*methodPtr)
-	gp.adjustHeaders(*ctJsonPtr)
+	hwp.parseDomain()
+	hwp.mustParseMethod(*methodPtr)
+	hwp.adjustHeaders(*ctJsonPtr)
 
-	return gp
+	return hwp
 }

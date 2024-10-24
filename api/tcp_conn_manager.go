@@ -45,13 +45,13 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 
 // For the requests that are not made with
 // TLS handshake.
-func (tcm *TCPConnManager) initTCPConn(gp gurlParams) error {
+func (tcm *TCPConnManager) initTCPConn(hwp httpWsParams) error {
 	if tcm.isConnTls {
 		certPool := mustPrepareCertPool()
 		conn, err := tls.Dial(
 			"tcp",
 			fmt.Sprintf("%s:%d", tcm.ip.String(), tcm.port),
-			&tls.Config{RootCAs: certPool, ServerName: gp.domain},
+			&tls.Config{RootCAs: certPool, ServerName: hwp.domain},
 		)
 		if err != nil {
 			return err

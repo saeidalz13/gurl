@@ -13,26 +13,26 @@ func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
 	// Preparing the parameters for gurl app.
-	gp := newGurlParams()
+	hwp := newHTTPWSParams()
 
 	// Fetching IP and port of the remote address.
-	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, gp.domain).resolveConnectionInfo()
+	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, hwp.domain).resolveConnectionInfo()
 
 	// Initializing the TCP connection manager for
 	// TCP conn and its management.
 	tcm := newTCPConnManager(ip, port, isConnTls)
-	err := tcm.initTCPConn(gp)
+	err := tcm.initTCPConn(hwp)
 	errutils.CheckErr(err)
 
-	if gp.isWs {
-		wsRequest, err := createWsRequest(gp.path, gp.domain)
+	if hwp.isWs {
+		wsRequest, err := createWsRequest(hwp.path, hwp.domain)
 		errutils.CheckErr(err)
 		go tcm.readWebSocketData()
 		tcm.writeWebSocketData([]byte(wsRequest))
 
 	} else {
-		httpRequest := newHTTPRequestCreator(gp.domain, gp.path, gp.method, gp.headers).create()
+		httpRequest := newHTTPRequestCreator(hwp.domain, hwp.path, hwp.method, hwp.headers).create()
 		respBytes := tcm.dispatchHTTPRequest(httpRequest)
-		newHTTPResponseParser(respBytes).parse().printPretty(gp.verbose)
+		newHTTPResponseParser(respBytes).parse().printPretty(hwp.verbose)
 	}
 }
