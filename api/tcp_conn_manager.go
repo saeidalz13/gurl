@@ -82,15 +82,6 @@ func (tcm TCPConnManager) dispatchHTTPRequest(httpRequest string) []byte {
 	return tcm.readHTTPRespFromConn()
 }
 
-// func handleWSSReq(conn *tls.Conn, wsRequest string) {
-// 	_, err := conn.Write([]byte(wsRequest))
-// 	if err != nil {
-// 		fmt.Printf("write tcp read: %v\n", err)
-// 		os.Exit(1)
-// 	}
-// 	readFromTLSConnWSS(conn)
-// }
-
 // in HTTP 1.1 the default header setting of
 // connection is "keep-alive".
 //
@@ -144,33 +135,9 @@ tcpLoop:
 
 		case headerContentLength:
 			if readIteration == headerIteration {
-				var bodyPos, shouldBreakNum int
-				bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
-			lineLoop:
-				for _, line := range bytesLines {
-					// + 2 is for \n and \r
-					bodyPos = bodyPos + len(line) + 2
-					if string(line) == "" {
-						shouldBreakNum++
-					}
-
-					if bytes.Contains(line, []byte("Content-Length")) {
-						contentLengthBytes := bytes.TrimSpace(bytes.Split(line, []byte(":"))[1])
-
-						num, err := strconv.ParseInt(string(contentLengthBytes), 10, 64)
-						if err != nil {
-							fmt.Println("invalid response from server")
-							os.Exit(1)
-						}
-						contentLength = int(num)
-						shouldBreakNum++
-					}
-
-					if shouldBreakNum == 2 {
-						break lineLoop
-					}
-				}
-				readContentLength = n - bodyPos
+				cl, bodyIdx := extractContentLengthBodyStartingIdx(buf[:n])
+				contentLength = cl
+				readContentLength = n - bodyIdx
 
 				continue tcpLoop
 			} else {
@@ -178,18 +145,15 @@ tcpLoop:
 			}
 
 		case headerChunk:
-			bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
-			for _, line := range bytesLines {
-				// If "0" was found at the end of the body
-				// it shows that there's no more bytes to
-				// be sent from the server.
-				if bytes.Equal(line, []byte{48}) {
-					return response.Bytes()
-				}
+			// bytes of final \r\n + bytes of end of body \r\n + offset of len
+			// 2 + 2 + 1 = 5
+			// position of potential '0' = 5
+			if buf[n-5] == '0' {
+				return response.Bytes()
 			}
 
-			// This is unncessary but to show explictely
-			// what needs to happen. If "0" was not found
+			// unncessary `continue` but to show explicitely
+			// what needs to happen. If '0' was not found
 			// at the end of body, it means more data
 			// will be streamed from server. So tcpLoop
 			// shall live on!
@@ -298,3 +262,44 @@ func mustPrepareCertPool() *x509.CertPool {
 
 	return certPool
 }
+
+func extractContentLengthBodyStartingIdx(httpResp []byte) (int, int) {
+	var bodyPos, shouldBreakNum, contentLength int
+	bytesLines := bytes.Split(httpResp, []byte("\r\n"))
+lineLoop:
+	for _, line := range bytesLines {
+		// + 2 is for \n and \r
+		bodyPos = bodyPos + len(line) + 2
+		if string(line) == "" {
+			shouldBreakNum++
+		}
+
+		if bytes.Contains(line, []byte("Content-Length")) {
+			contentLengthBytes := bytes.TrimSpace(bytes.Split(line, []byte(":"))[1])
+
+			num, err := strconv.ParseInt(string(contentLengthBytes), 10, 64)
+			if err != nil {
+				fmt.Println("invalid response from server")
+				os.Exit(1)
+			}
+			contentLength = int(num)
+			shouldBreakNum++
+		}
+
+		if shouldBreakNum == 2 {
+			break lineLoop
+		}
+	}
+
+	return contentLength, bodyPos
+}
+
+// bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
+// for _, line := range bytesLines {
+// 	// If "0" was found at the end of the body
+// 	// it shows that there's no more bytes to
+// 	// be sent from the server.
+// 	if bytes.Equal(line, asciiZero) {
+// 		return response.Bytes()
+// 	}
+// }
