@@ -57,6 +57,13 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 func (gp *gurlParams) parseDomain() {
 	domain := os.Args[1]
 	domain = stringutils.TrimDomainSpace(domain)
+
+	// Decide if the input wants a websocket req.
+	// User MUST include the procotol in the input
+	// domain for websocket requests.
+	// (ws:// or wss://)
+	gp.isWs = stringutils.IsDomainForWebsocket(domain)
+
 	if gp.isWs {
 		gp.mustParseDomainWS(domain)
 	} else {
@@ -76,7 +83,6 @@ func newGurlParams() gurlParams {
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
 	ctJsonPtr := domainCmd.Bool("json", false, "Add HTTP Request Header -> Content-Type: application/json")
 	verbose := domainCmd.Bool("v", false, "Prints metadata and steps of request")
-	isWs := domainCmd.Bool("ws", false, "Makes a WebSocket request")
 	if len(os.Args) < 2 {
 		fmt.Println("must provide domain name")
 		domainCmd.Usage()
@@ -87,7 +93,6 @@ func newGurlParams() gurlParams {
 	// Initialize gurlParams struct
 	gp := gurlParams{
 		headers: make([]string, 0),
-		isWs:    *isWs,
 		verbose: *verbose,
 	}
 

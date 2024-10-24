@@ -83,15 +83,15 @@ const (
 )
 
 func PrintWsError(errMsg string) {
-	fmt.Printf("%s[ERROR]%s: %s", BoldRed, FormatReset, errMsg)
+	fmt.Printf("%s[ERROR]:%s %s", BoldRed, FormatReset, errMsg)
 }
 
 func PrintWsServerMsg(msg string) {
-	fmt.Printf("%s[SERVER]%s: %s\n", BoldCyan, FormatReset, msg)
+	fmt.Printf("%s[SERVER]:%s %s\n", BoldCyan, FormatReset, msg)
 }
 
 func PrintWsClientMsg(msg string) {
-	fmt.Printf("%s[CLIENT]%s: %s\n", BoldYellow, FormatReset, msg)
+	fmt.Printf("%s[CLIENT]:%s %s\n", BoldGreen, FormatReset, msg)
 }
 
 func GetWsInputFromStdin() []byte {

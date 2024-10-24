@@ -57,3 +57,7 @@ func ExtractWsProtocol(domain string) (uint8, string, error) {
 func TrimDomainSpace(domain string) string {
 	return strings.TrimSpace(domain)
 }
+
+func IsDomainForWebsocket(domain string) bool {
+	return strings.HasPrefix(domain, "ws://") || strings.HasPrefix(domain, "wss://")
+}
