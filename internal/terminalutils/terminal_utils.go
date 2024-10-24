@@ -1,6 +1,11 @@
-package bashutils
+package terminalutils
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
 
 const (
 	// Reset
@@ -87,4 +92,40 @@ func PrintWsServerMsg(msg string) {
 
 func PrintWsClientMsg(msg string) {
 	fmt.Printf("%s[CLIENT]%s: %s\n", BoldYellow, FormatReset, msg)
+}
+
+func GetWsInputFromStdin() []byte {
+	// If we use fmt.Scanln(), then it only reads
+	// the characters until the space. bufio lets
+	// us consider all the characters until the
+	// delimiter we decide. We choose '\n' that
+	// shows the end of the input.
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		rawInput, err := reader.ReadString('\n')
+		if err != nil {
+			PrintWsError(err.Error())
+			continue
+		}
+
+		// Trim spaces and newlines from the input
+		rawInput = strings.TrimSpace(rawInput)
+
+		// Check if the input is empty or contains only spaces
+		if len(rawInput) == 0 {
+			PrintWsError("empty input!")
+			continue
+		}
+
+		// Remove spaces within the input
+		modInput := make([]byte, 0, len(rawInput))
+		for _, b := range []byte(rawInput) {
+			if b != ' ' {
+				modInput = append(modInput, b)
+			}
+		}
+
+		return modInput
+	}
 }

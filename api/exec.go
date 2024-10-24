@@ -1,68 +1,38 @@
 package api
 
 import (
-	"crypto/tls"
-	"fmt"
-	"os"
+	"github.com/saeidalz13/gurl/internal/appconstants"
+	"github.com/saeidalz13/gurl/internal/errutils"
 )
-
-func handleHTTPSReq(conn *tls.Conn, httpRequest string, verbose bool) {
-	_, err := conn.Write([]byte(httpRequest))
-	if err != nil {
-		fmt.Printf("write tcp read: %v\n", err)
-		os.Exit(1)
-	}
-
-	tcpRespBytes := readFromTLSConnHTTPS(conn)
-	httpResp := newHTTPResponse(string(tcpRespBytes))
-	printPretty(httpResp, verbose)
-}
-
-func handleWSSReq(conn *tls.Conn, wsRequest string) {
-	_, err := conn.Write([]byte(wsRequest))
-	if err != nil {
-		fmt.Printf("write tcp read: %v\n", err)
-		os.Exit(1)
-	}
-	readFromTLSConnWSS(conn)
-}
-
-func execSecure(gp gurlParams) {
-	tlsConn := makeTlsTcpConn(gp.serverIP.String(), gp.domain)
-	defer tlsConn.Close()
-
-	if gp.isWs {
-		wsRequest := mustCreateWsRequest(gp.path, gp.domain)
-		handleWSSReq(tlsConn, wsRequest)
-	} else {
-		httpRequest := createHTTPRequest(gp)
-		handleHTTPSReq(tlsConn, httpRequest, gp.verbose)
-	}
-}
-
-// For the requests that are not made with
-// TLS handshake.
-func execInSecure(gp gurlParams) {
-	tcpConn := makeTcpConn(gp.serverIP, gp.port)
-	defer tcpConn.Close()
-
-	if gp.isWs {
-		wsRequest := mustCreateWsRequest(gp.path, gp.domain)
-		go manageReadTCPConnWS(tcpConn)
-		manageWriteTCPConnWS(tcpConn, []byte(wsRequest))
-	}
-}
 
 // Entry point of the application execution.
 //
 // Depending on the url protocol, it can be
 // a secure or insecure request.
 func ExecGurl() {
+	ipCacheDir := appconstants.MustMakeIpCacheDir()
+
+	// Preparing the parameters for gurl app.
 	gp := newGurlParams()
 
-	if gp.isConnTls {
-		execSecure(gp)
+	// Fetching IP and port of the remote address.
+	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, gp.domain).determineRemoteIpPort()
+
+	// Initializing the TCP connection manager for
+	// TCP conn and its management.
+	tcm := newTCPConnManager(ip, port, isConnTls)
+	err := tcm.initTCPConn(gp)
+	errutils.CheckErr(err)
+
+	if gp.isWs {
+		wsRequest, err := createWsRequest(gp.path, gp.domain)
+		errutils.CheckErr(err)
+		go tcm.manageReadTCPConnWS()
+		tcm.manageWriteTCPConnWS([]byte(wsRequest))
 	} else {
-		execInSecure(gp)
+		tcm.setDeadlineToConn()
+		httpRequest := createHTTPRequest(gp)
+		respBytes := tcm.makeHTTPRequest(httpRequest)
+		newHTTPResponse(respBytes).parse().printPretty(gp.verbose)
 	}
 }

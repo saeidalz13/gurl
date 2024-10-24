@@ -3,12 +3,10 @@ package api
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
-	"os"
 	"strings"
 )
 
-func mustCreateWsRequest(path, domain string) string {
+func createWsRequest(path, domain string) (string, error) {
 	sb := strings.Builder{}
 	sb.Grow(50)
 
@@ -39,8 +37,7 @@ func mustCreateWsRequest(path, domain string) string {
 	key := make([]byte, 16)
 	_, err := rand.Read(key)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return "", err
 	}
 
 	sb.WriteString(base64.StdEncoding.EncodeToString(key))
@@ -51,5 +48,5 @@ func mustCreateWsRequest(path, domain string) string {
 	// Ending of request based on HTTP
 	sb.WriteString("\r\n")
 
-	return sb.String()
+	return sb.String(), nil
 }

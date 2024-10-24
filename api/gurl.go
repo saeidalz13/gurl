@@ -3,11 +3,9 @@ package api
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 
-	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/stringutils"
@@ -24,26 +22,15 @@ type gurlParams struct {
 	// Is this a WebSocket request
 	isWs       bool
 	wsProtocol uint8
-
-	// Server info
-	serverIP net.IP
-	port     int
-
-	isConnTls  bool
-	ipCacheDir string
 }
 
-func (gp *gurlParams) mustParseDomainHTTP() {
-	domain := os.Args[1]
-	domain = stringutils.TrimDomainSpace(domain)
+func (gp *gurlParams) mustParseDomainHTTP(domain string) {
 	domain, err := stringutils.TrimDomainPrefix(domain)
 	errutils.CheckErr(err)
 	gp.domain, gp.path = stringutils.ExtractPathFromDomain(domain)
 }
 
-func (gp *gurlParams) mustParseDomainWS() {
-	domain := os.Args[1]
-	domain = stringutils.TrimDomainSpace(domain)
+func (gp *gurlParams) mustParseDomainWS(domain string) {
 	wsProtocol, trimmedDomain, err := stringutils.ExtractWsProtocol(domain)
 	if err != nil {
 		fmt.Println(err)
@@ -67,9 +54,24 @@ func (gp *gurlParams) mustParseMethod(rawMethod string) {
 	gp.method = method
 }
 
-func newGurlParams() gurlParams {
-	ipCacheDir := appconstants.MustMakeIpCacheDir()
+func (gp *gurlParams) parseDomain() {
+	domain := os.Args[1]
+	domain = stringutils.TrimDomainSpace(domain)
+	if gp.isWs {
+		gp.mustParseDomainWS(domain)
+	} else {
+		gp.mustParseDomainHTTP(domain)
+	}
+}
 
+func (gp *gurlParams) adjustHeaders(contentLengthJson bool) {
+	if contentLengthJson {
+		gp.headers = append(gp.headers, "Content-Type: application/json")
+	}
+}
+
+func newGurlParams() gurlParams {
+	// CLI init section
 	domainCmd := flag.NewFlagSet("domain", flag.ExitOnError)
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
 	ctJsonPtr := domainCmd.Bool("json", false, "Add HTTP Request Header -> Content-Type: application/json")
@@ -82,43 +84,16 @@ func newGurlParams() gurlParams {
 	}
 	domainCmd.Parse(os.Args[2:])
 
+	// Initialize gurlParams struct
 	gp := gurlParams{
-		headers:    make([]string, 0),
-		isWs:       *isWs,
-		verbose:    *verbose,
-		ipCacheDir: ipCacheDir,
+		headers: make([]string, 0),
+		isWs:    *isWs,
+		verbose: *verbose,
 	}
 
-	if *ctJsonPtr {
-		gp.headers = append(gp.headers, "Content-Type: application/json")
-	}
-
-	if gp.isWs {
-		gp.mustParseDomainWS()
-	} else {
-		gp.mustParseDomainHTTP()
-	}
-
+	gp.parseDomain()
 	gp.mustParseMethod(*methodPtr)
-
-	if stringutils.IsDomainLocalHost(gp.domain) {
-		gp.serverIP = net.IPv4(127, 0, 0, 1)
-		port, err := stringutils.ExtractPort(gp.domain)
-		errutils.CheckErr(err)
-		gp.port = port
-		gp.isConnTls = false
-	} else {
-		ip, err := fetchCachedIp(ipCacheDir, gp.domain)
-		if err != nil {
-			ip = mustFetchDomainIp(gp.domain)
-			if err := cacheDomainIp(ipCacheDir, gp.domain, ip.String()); err != nil {
-				fmt.Println("failed to cache ip")
-			}
-		}
-
-		gp.serverIP = ip
-		gp.isConnTls = true
-	}
+	gp.adjustHeaders(*ctJsonPtr)
 
 	return gp
 }

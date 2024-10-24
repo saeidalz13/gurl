@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/saeidalz13/gurl/internal/bashutils"
 	"github.com/saeidalz13/gurl/internal/encodingutils"
+	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
 /*
@@ -20,22 +20,46 @@ type HTTPResponse struct {
 	statusMsg  string
 	headers    []string
 	body       string
+
+	responseSegments []string
 }
 
-func newHTTPResponse(tcpResponse string) HTTPResponse {
-	responseSegments := strings.Split(tcpResponse, "\r\n")
+func newHTTPResponse(respBytes []byte) HTTPResponse {
+	responseSegments := strings.Split(string(respBytes), "\r\n")
 	httpResp := HTTPResponse{
-		headers: make([]string, 0, 3),
+		headers:          make([]string, 0, 3),
+		responseSegments: responseSegments,
+	}
+	return httpResp
+}
+
+func (hr HTTPResponse) determineStatusCodeBashColor() string {
+	switch hr.statusCode[0] {
+	case encodingutils.ASCII2:
+		return terminalutils.BoldGreen
+
+	case encodingutils.ASCII3:
+		return terminalutils.BoldCyan
+
+	case encodingutils.ASCII4:
+		return terminalutils.BoldRed
+
+	case encodingutils.ASCII5:
+		return terminalutils.BoldPurple
 	}
 
+	return "\033[0;31m"
+}
+
+func (hr HTTPResponse) parse() HTTPResponse {
 	var bodyIdx int
-	for i, segment := range responseSegments {
+	for i, segment := range hr.responseSegments {
 		// First line is always the status line
 		if i == 0 {
 			statusLineSegments := strings.Split(segment, " ")
-			httpResp.version = statusLineSegments[0]
-			httpResp.statusCode = statusLineSegments[1]
-			httpResp.statusMsg = statusLineSegments[2]
+			hr.version = statusLineSegments[0]
+			hr.statusCode = statusLineSegments[1]
+			hr.statusMsg = statusLineSegments[2]
 			continue
 		}
 
@@ -46,7 +70,7 @@ func newHTTPResponse(tcpResponse string) HTTPResponse {
 			break
 		}
 
-		httpResp.headers = append(httpResp.headers, segment)
+		hr.headers = append(hr.headers, segment)
 	}
 
 	sb := strings.Builder{}
@@ -54,44 +78,26 @@ func newHTTPResponse(tcpResponse string) HTTPResponse {
 
 	// We found the idx that starts the body
 	// aggregate again to have body string
-	for _, seg := range responseSegments[bodyIdx:] {
+	for _, seg := range hr.responseSegments[bodyIdx:] {
 		sb.WriteString(seg)
 	}
 
-	httpResp.body = sb.String()
+	hr.body = sb.String()
 
-	return httpResp
+	return hr
 }
 
-func determineStatusCodeBashColor(statusCode string) string {
-	switch statusCode[0] {
-	case encodingutils.ASCII2:
-		return bashutils.BoldGreen
-
-	case encodingutils.ASCII3:
-		return bashutils.BoldCyan
-
-	case encodingutils.ASCII4:
-		return bashutils.BoldRed
-
-	case encodingutils.ASCII5:
-		return bashutils.BoldPurple
-	}
-
-	return "\033[0;31m"
-}
-
-func printPretty(httpResp HTTPResponse, verbose bool) {
+func (hr HTTPResponse) printPretty(verbose bool) {
 	if verbose {
 		fmt.Println("\n\033[1;37mStatus\033[0m")
 		fmt.Println("---------------------")
-		fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", httpResp.version)
-		fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", determineStatusCodeBashColor(httpResp.statusCode), httpResp.statusCode)
-		fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", httpResp.statusMsg)
+		fmt.Printf("\033[0;33mHTTP Version\033[0m   | %s \n", hr.version)
+		fmt.Printf("\033[0;33mStatus Code    | %s%s\033[0m\n", hr.determineStatusCodeBashColor(), hr.statusCode)
+		fmt.Printf("\033[0;33mStatus Message\033[0m | %s \n", hr.statusMsg)
 
 		fmt.Println("\n\033[1;37mHeaders\033[0m")
 		fmt.Println("---------------------")
-		for _, header := range httpResp.headers {
+		for _, header := range hr.headers {
 			headerSegments := strings.Split(header, ":")
 			fmt.Printf("\033[0;36m%s\033[0m: %s\n", headerSegments[0], headerSegments[1])
 			// fmt.Println("")
@@ -100,5 +106,5 @@ func printPretty(httpResp HTTPResponse, verbose bool) {
 
 	fmt.Println("\n\033[1;37mBody\033[0m")
 	fmt.Println("---------------------")
-	fmt.Println(httpResp.body)
+	fmt.Println(hr.body)
 }

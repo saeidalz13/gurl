@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
@@ -12,33 +11,83 @@ import (
 	"strings"
 	"time"
 
-	"github.com/saeidalz13/gurl/internal/bashutils"
 	"github.com/saeidalz13/gurl/internal/errutils"
-	"github.com/saeidalz13/gurl/internal/httpconstants"
+	"github.com/saeidalz13/gurl/internal/terminalutils"
 	"github.com/saeidalz13/gurl/internal/wsutils"
 )
 
 const (
-	HeaderCloseConn uint8 = iota
-	HeaderChunk
-	HeaderContentLength
+	headerCloseConn uint8 = iota
+	headerChunk
+	headerContentLength
 )
 
-// Identifies which parameter exists in the
-// http response header so we know if we should
-// close the connection right away or keep it
-// alive and handle the rest of streams of data.
-func identifyHeaderParam(bufContainingHeader []byte) uint8 {
-	if bytes.Contains(bufContainingHeader, []byte("Content-Length")) {
-		return HeaderContentLength
-	}
+type TCPConnManager struct {
+	ip   net.IP
+	port int
 
-	if bytes.Contains(bufContainingHeader, []byte("chunked")) {
-		return HeaderChunk
-	}
-
-	return HeaderCloseConn
+	isConnTls bool
+	conn      net.Conn
 }
+
+func newTCPConnManager(ip net.IP, port int, isConnTls bool) TCPConnManager {
+	return TCPConnManager{
+		ip:        ip,
+		port:      port,
+		isConnTls: isConnTls,
+	}
+}
+
+func (tcm TCPConnManager) setDeadlineToConn() {
+	tcm.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	tcm.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+}
+
+// For the requests that are not made with
+// TLS handshake.
+func (tcm *TCPConnManager) initTCPConn(gp gurlParams) error {
+	if tcm.isConnTls {
+		certPool := mustPrepareCertPool()
+		conn, err := tls.Dial(
+			"tcp",
+			fmt.Sprintf("%s:%d", tcm.ip.String(), tcm.port),
+			&tls.Config{RootCAs: certPool, ServerName: gp.domain},
+		)
+		if err != nil {
+			return err
+		}
+		tcm.conn = conn
+		return nil
+	}
+
+	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: tcm.ip, Port: tcm.port})
+	if err != nil {
+		return err
+	}
+	tcm.conn = conn
+	return nil
+}
+
+// Write the prepare http request to TCP connection
+// and returns the response bytes.
+func (tcm TCPConnManager) makeHTTPRequest(httpRequest string) []byte {
+	_, err := tcm.conn.Write([]byte(httpRequest))
+	if err != nil {
+		fmt.Printf("write tcp read: %v\n", err)
+		os.Exit(1)
+	}
+
+	return tcm.readHTTPRespFromConn()
+}
+
+// func handleWSSReq(conn *tls.Conn, wsRequest string) {
+// 	_, err := conn.Write([]byte(wsRequest))
+// 	if err != nil {
+// 		fmt.Printf("write tcp read: %v\n", err)
+// 		os.Exit(1)
+// 	}
+// 	readFromTLSConnWSS(conn)
+// }
 
 // in HTTP 1.1 the default header setting of
 // connection is "keep-alive".
@@ -51,7 +100,7 @@ func identifyHeaderParam(bufContainingHeader []byte) uint8 {
 // If none of those options provided, that means the
 // entire data is sent in one single stream and we can
 // close the TCP conn after the first read.
-func readFromTLSConnHTTPS(tlsConn *tls.Conn) []byte {
+func (tcm TCPConnManager) readHTTPRespFromConn() []byte {
 	var response bytes.Buffer
 	var readContentLength int = -1
 	var contentLength int
@@ -66,7 +115,7 @@ tcpLoop:
 		readIteration++
 		buf := make([]byte, bufSize)
 
-		n, err := tlsConn.Read(buf)
+		n, err := tcm.conn.Read(buf)
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
@@ -88,10 +137,10 @@ tcpLoop:
 		}
 
 		switch headerParam {
-		case HeaderCloseConn:
+		case headerCloseConn:
 			return response.Bytes()
 
-		case HeaderContentLength:
+		case headerContentLength:
 			if readIteration == headerIteration {
 				var bodyPos, shouldBreakNum int
 				bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
@@ -126,7 +175,7 @@ tcpLoop:
 				readContentLength += n
 			}
 
-		case HeaderChunk:
+		case headerChunk:
 			bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
 			for _, line := range bytesLines {
 				// If "0" was found at the end of the body
@@ -149,37 +198,15 @@ tcpLoop:
 	return response.Bytes()
 }
 
-func readFromTLSConnWSS(tlsConn *tls.Conn) {
-	for {
-		buf := make([]byte, 2<<10)
-		n, err := tlsConn.Read(buf)
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-
-			if strings.Contains(err.Error(), "i/o timeout") {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-
-			fmt.Printf("error read: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println(buf[:n])
-	}
-}
-
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
-func manageReadTCPConnWS(tcpConn *net.TCPConn) {
+func (tcm TCPConnManager) manageReadTCPConnWS() {
 	headerIteration := true
 
 	for {
 		buf := make([]byte, 2<<15)
-		n, err := tcpConn.Read(buf)
+		n, err := tcm.conn.Read(buf)
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
@@ -210,7 +237,7 @@ func manageReadTCPConnWS(tcpConn *net.TCPConn) {
 				fmt.Println(err)
 				continue
 			}
-			bashutils.PrintWsServerMsg(string(payload))
+			terminalutils.PrintWsServerMsg(string(payload))
 		}
 	}
 
@@ -218,22 +245,43 @@ func manageReadTCPConnWS(tcpConn *net.TCPConn) {
 	os.Exit(1)
 }
 
-func manageWriteTCPConnWS(tcpConn *net.TCPConn, msgByte []byte) {
+func (tcm TCPConnManager) manageWriteTCPConnWS(msgByte []byte) {
 	for {
-		_, err := tcpConn.Write(msgByte)
+		_, err := tcm.conn.Write(msgByte)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		input := getWsInputFromStdin()
-		bashutils.PrintWsClientMsg(string(input))
+		input := terminalutils.GetWsInputFromStdin()
+		terminalutils.PrintWsClientMsg(string(input))
 
 		frame := wsutils.CreateWsFrame(input)
 		msgByte = frame
 	}
 }
 
+// Identifies which parameter exists in the
+// http response header so we know if we should
+// close the connection right away or keep it
+// alive and handle the rest of streams of data.
+func identifyHeaderParam(bufContainingHeader []byte) uint8 {
+	if bytes.Contains(bufContainingHeader, []byte("Content-Length")) {
+		return headerContentLength
+	}
+
+	if bytes.Contains(bufContainingHeader, []byte("chunked")) {
+		return headerChunk
+	}
+
+	return headerCloseConn
+}
+
+// Preparing the certificaion info for
+// the TLS handshake on TCP. Some systems
+// don't automatically load certificates.
+//
+// It is included in the binary package.
 func mustPrepareCertPool() *x509.CertPool {
 	readBytes, err := os.ReadFile(os.Getenv("CERTS_DIR"))
 	errutils.CheckErr(err)
@@ -247,68 +295,4 @@ func mustPrepareCertPool() *x509.CertPool {
 	}
 
 	return certPool
-}
-
-func makeTlsTcpConn(ip, domain string) *tls.Conn {
-	certPool := mustPrepareCertPool()
-
-	tlsConn, err := tls.Dial(
-		"tcp",
-		ip+":"+httpconstants.PortHTTPS,
-		&tls.Config{RootCAs: certPool, ServerName: domain},
-	)
-	errutils.CheckErr(err)
-
-	tlsConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	tlsConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-
-	return tlsConn
-}
-
-func makeTcpConn(ip net.IP, port int) *net.TCPConn {
-	tcpConn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: ip, Port: port})
-	errutils.CheckErr(err)
-
-	// We want to keep the read as blocking on another
-	// goroutine. So no deadline for it.
-	// tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	// tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-
-	return tcpConn
-}
-
-func getWsInputFromStdin() []byte {
-	// If we use fmt.Scanln(), then it only reads
-	// the characters until the space. bufio lets
-	// us consider all the characters until the
-	// delimiter we decide. We choose '\n' that
-	// shows the end of the input.
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		rawInput, err := reader.ReadString('\n')
-		if err != nil {
-			bashutils.PrintWsError(err.Error())
-			continue
-		}
-
-		// Trim spaces and newlines from the input
-		rawInput = strings.TrimSpace(rawInput)
-
-		// Check if the input is empty or contains only spaces
-		if len(rawInput) == 0 {
-			bashutils.PrintWsError("empty input!")
-			continue
-		}
-
-		// Remove spaces within the input
-		modInput := make([]byte, 0, len(rawInput))
-		for _, b := range []byte(rawInput) {
-			if b != ' ' {
-				modInput = append(modInput, b)
-			}
-		}
-
-		return modInput
-	}
 }

@@ -2,7 +2,6 @@ package stringutils
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 
 	"github.com/saeidalz13/gurl/internal/wsutils"
@@ -57,18 +56,4 @@ func ExtractWsProtocol(domain string) (uint8, string, error) {
 
 func TrimDomainSpace(domain string) string {
 	return strings.TrimSpace(domain)
-}
-
-func IsDomainLocalHost(domain string) bool {
-	return strings.Contains(domain, "localhost") || strings.Contains(domain, "127.0.0.1")
-}
-
-func ExtractPort(domain string) (int, error) {
-	domainSegments := strings.Split(domain, ":")
-
-	if len(domainSegments) != 2 {
-		return 0, errors.New("domain must be in format of ip:port")
-	}
-
-	return strconv.Atoi(domainSegments[1])
 }

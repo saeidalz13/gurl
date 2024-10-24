@@ -17,6 +17,6 @@ var ValidHttpMethods = map[string]bool{
 }
 
 const (
-	PortHTTPS = "443"
-	PortHTTP  = "80"
+	PortHTTPS = 443
+	PortHTTP  = 80
 )
