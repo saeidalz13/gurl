@@ -133,7 +133,6 @@ func (hr HTTPResponse) printPretty(verbose bool) {
 		for _, header := range hr.headers {
 			headerSegments := strings.Split(header, ":")
 			fmt.Printf("%s%s%s: %s\n", terminalutils.RegularCyan, headerSegments[0], terminalutils.FormatReset, headerSegments[1])
-			// fmt.Println("")
 		}
 	}
 
