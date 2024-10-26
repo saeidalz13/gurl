@@ -14,23 +14,18 @@ import (
 func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
-	// Input params from CLI
 	cp := initCli()
 
 	method, err := methodparser.ParseMethod(cp.method)
 	errutils.CheckErr(err)
 
-	// Parsing domain
 	dp := domainparser.NewDomainParser(cp.domain)
 	err = dp.Parse()
 	errutils.CheckErr(err)
 
-	// Fetching IP and port of the remote address.
 	ram := newRemoteAddrManager(ipCacheDir, dp.Domain, dp.DomainSegment)
 	ip, port, isConnTls := ram.resolveConnectionInfo()
 
-	// Initializing the TCP connection manager for
-	// TCP conn and its management.
 	tcm := newTCPConnManager(ip, port, isConnTls, dp.Domain)
 	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)

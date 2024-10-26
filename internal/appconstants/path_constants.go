@@ -9,9 +9,7 @@ import (
 
 func MustMakeIpCacheDir() string {
 	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		errutils.CheckErr(err)
-	}
+	errutils.CheckErr(err)
 
 	ipCacheDir := filepath.Join(homeDir, ".gurl", "ipcache")
 
