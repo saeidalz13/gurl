@@ -35,15 +35,19 @@ func ExecGurl() {
 	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)
 
-	if hwp.isWs {
-		wsRequest, err := createWsRequest(hwp.path, hwp.domain)
+	if dp.IsWebSocket {
+		wsRequest, err := createWsRequest(dp.Path, dp.Domain)
 		errutils.CheckErr(err)
 		go tcm.readWebSocketData()
 		tcm.writeWebSocketData([]byte(wsRequest))
-
-	} else {
-		httpRequest := newHTTPRequestCreator(hwp.domain, hwp.path, method, hwp.headers).create()
-		respBytes := tcm.dispatchHTTPRequest(httpRequest)
-		newHTTPResponseParser(respBytes).parse().printPretty(hwp.verbose)
+		return
 	}
+
+	hrc := newHTTPRequestCreator(dp.Domain, dp.Path, method)
+	if cp.ctJson {
+		hrc.AddContentTypeJson()
+	}
+	httpRequest := hrc.Create()
+	respBytes := tcm.dispatchHTTPRequest(httpRequest)
+	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
 }

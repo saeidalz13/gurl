@@ -5,22 +5,26 @@ import (
 )
 
 type HTTPRequest struct {
-	domain  string
-	path    string
-	method  string
-	headers []string
+	domain           string
+	path             string
+	method           string
+	additonalHeaders []string
 }
 
-func newHTTPRequestCreator(domain, path, method string, headers []string) HTTPRequest {
+func newHTTPRequestCreator(domain, path, method string) HTTPRequest {
 	return HTTPRequest{
-		domain:  domain,
-		path:    path,
-		method:  method,
-		headers: headers,
+		domain:           domain,
+		path:             path,
+		method:           method,
+		additonalHeaders: make([]string, 0),
 	}
 }
 
-func (h HTTPRequest) create() string {
+func (h *HTTPRequest) AddContentTypeJson() {
+	h.additonalHeaders = append(h.additonalHeaders, "application/json")
+}
+
+func (h HTTPRequest) Create() string {
 	sb := strings.Builder{}
 	sb.Grow(50)
 
@@ -47,7 +51,7 @@ func (h HTTPRequest) create() string {
 	sb.WriteString("Accept: */*\r\n")
 
 	// User Headers
-	for _, header := range h.headers {
+	for _, header := range h.additonalHeaders {
 		sb.WriteString(header)
 		sb.WriteString("\r\n")
 	}
