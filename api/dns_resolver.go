@@ -8,16 +8,15 @@ import (
 	"net"
 	"strings"
 
-	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
 )
 
 type DNSResolver struct {
-	domain string
+	domainSegments []string
 }
 
-func newDNSResolver(domain string) DNSResolver {
-	return DNSResolver{domain}
+func newDNSResolver(domainSegments []string) DNSResolver {
+	return DNSResolver{domainSegments}
 }
 
 /*
@@ -33,7 +32,7 @@ Header sections
 Queries section:
   - Whatever you want to put in the query
 */
-func (dr DNSResolver) createDNSQuery(domainSegments []string) ([]byte, error) {
+func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 	id := uint16(rand.Intn(65535)) // To be within 8 bytes
 
 	minBytesNeeded := 16 // header 12 + QTYPE 2 + QCLASS 2
@@ -71,7 +70,7 @@ func (dr DNSResolver) createDNSQuery(domainSegments []string) ([]byte, error) {
 
 	// * Question Section (Variable len)
 	// QNAME (Domain section)
-	for _, part := range domainSegments {
+	for _, part := range dr.domainSegments {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
 			return nil, fmt.Errorf("invalid input domain")
@@ -93,12 +92,8 @@ func (dr DNSResolver) createDNSQuery(domainSegments []string) ([]byte, error) {
 
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
-func (dr DNSResolver) mustResolveIP() net.IP {
-	dp := domainparser.NewDomainParser(dr.domain)
-	domainSegments, err := dp.SplitDomainIntoSegments(dr.domain)
-	errutils.CheckErr(err)
-
-	dnsQuery, err := dr.createDNSQuery(domainSegments)
+func (dr DNSResolver) MustResolveIP() net.IP {
+	dnsQuery, err := dr.createDNSQuery()
 	errutils.CheckErr(err)
 
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})

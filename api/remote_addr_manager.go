@@ -13,14 +13,16 @@ import (
 )
 
 type RemoteAddrManager struct {
-	domain     string
-	ipCacheDir string
+	domain         string
+	ipCacheDir     string
+	domainSegments []string
 }
 
-func newRemoteAddrManager(ipCacheDir, domain string) RemoteAddrManager {
+func newRemoteAddrManager(ipCacheDir, domain string, domainSegments []string) RemoteAddrManager {
 	return RemoteAddrManager{
-		domain:     domain,
-		ipCacheDir: ipCacheDir,
+		domain:         domain,
+		ipCacheDir:     ipCacheDir,
+		domainSegments: domainSegments,
 	}
 }
 
@@ -102,7 +104,7 @@ func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
 	// unnecessary network I/O.
 	ip, err := ram.fetchCachedIp()
 	if err != nil {
-		ip = newDNSResolver(ram.domain).mustResolveIP()
+		ip = newDNSResolver(ram.domainSegments).MustResolveIP()
 		if err := ram.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
 			fmt.Printf("skipped ip caching: %v\n", err)

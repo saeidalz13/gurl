@@ -2,7 +2,9 @@ package api
 
 import (
 	"github.com/saeidalz13/gurl/internal/appconstants"
+	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/methodparser"
 )
 
 // Entry point of the application execution.
@@ -12,16 +14,25 @@ import (
 func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
-	// Preparing the parameters for gurl app.
-	hwp := initCli()
+	// Input params from CLI
+	cp := initCli()
+
+	method, err := methodparser.ParseMethod(cp.method)
+	errutils.CheckErr(err)
+
+	// Parsing domain
+	dp := domainparser.NewDomainParser(cp.domain)
+	err = dp.Parse()
+	errutils.CheckErr(err)
 
 	// Fetching IP and port of the remote address.
-	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, hwp.domain).resolveConnectionInfo()
+	ram := newRemoteAddrManager(ipCacheDir, dp.Domain, dp.DomainSegment)
+	ip, port, isConnTls := ram.resolveConnectionInfo()
 
 	// Initializing the TCP connection manager for
 	// TCP conn and its management.
-	tcm := newTCPConnManager(ip, port, isConnTls)
-	err := tcm.initTCPConn(hwp)
+	tcm := newTCPConnManager(ip, port, isConnTls, dp.Domain)
+	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)
 
 	if hwp.isWs {
@@ -31,7 +42,7 @@ func ExecGurl() {
 		tcm.writeWebSocketData([]byte(wsRequest))
 
 	} else {
-		httpRequest := newHTTPRequestCreator(hwp.domain, hwp.path, hwp.method, hwp.headers).create()
+		httpRequest := newHTTPRequestCreator(hwp.domain, hwp.path, method, hwp.headers).create()
 		respBytes := tcm.dispatchHTTPRequest(httpRequest)
 		newHTTPResponseParser(respBytes).parse().printPretty(hwp.verbose)
 	}

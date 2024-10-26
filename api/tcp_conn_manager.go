@@ -27,18 +27,19 @@ const (
 var cacertsPEM []byte
 
 type TCPConnManager struct {
-	ip   net.IP
-	port int
-
 	isConnTls bool
+	port      int
+	domain    string
+	ip        net.IP
 	conn      net.Conn
 }
 
-func newTCPConnManager(ip net.IP, port int, isConnTls bool) TCPConnManager {
+func newTCPConnManager(ip net.IP, port int, isConnTls bool, domain string) TCPConnManager {
 	return TCPConnManager{
 		ip:        ip,
 		port:      port,
 		isConnTls: isConnTls,
+		domain:    domain,
 	}
 }
 
@@ -49,13 +50,13 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 
 // For the requests that are not made with
 // TLS handshake.
-func (tcm *TCPConnManager) initTCPConn(hwp cliParams) error {
+func (tcm *TCPConnManager) InitTCPConn() error {
 	if tcm.isConnTls {
 		certPool := mustPrepareCertPool()
 		conn, err := tls.Dial(
 			"tcp",
 			fmt.Sprintf("%s:%d", tcm.ip.String(), tcm.port),
-			&tls.Config{RootCAs: certPool, ServerName: hwp.domain},
+			&tls.Config{RootCAs: certPool, ServerName: tcm.domain},
 		)
 		if err != nil {
 			return err

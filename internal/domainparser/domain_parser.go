@@ -8,10 +8,8 @@ import (
 type DomainParser struct {
 	IsLocalHost   bool
 	IsWebSocket   bool
-	IsTLS         bool
 	Domain        string
 	Path          string
-	Port          int
 	DomainSegment []string
 }
 
@@ -55,14 +53,12 @@ func (d *DomainParser) trimProtocolFromWebSocketDomain() error {
 	after, found := strings.CutPrefix(d.Domain, "ws://")
 	if found {
 		d.Domain = after
-		d.IsTLS = false
 		return nil
 	}
 
 	after, found = strings.CutPrefix(d.Domain, "wss://")
 	if found {
 		d.Domain = after
-		d.IsTLS = true
 		return nil
 	}
 
