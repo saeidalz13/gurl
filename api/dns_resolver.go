@@ -8,8 +8,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
-	"github.com/saeidalz13/gurl/internal/stringutils"
 )
 
 type DNSResolver struct {
@@ -94,7 +94,8 @@ func (dr DNSResolver) createDNSQuery(domainSegments []string) ([]byte, error) {
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func (dr DNSResolver) mustResolveIP() net.IP {
-	domainSegments, err := stringutils.SplitDomainIntoSegments(dr.domain)
+	dp := domainparser.NewDomainParser(dr.domain)
+	domainSegments, err := dp.SplitDomainIntoSegments(dr.domain)
 	errutils.CheckErr(err)
 
 	dnsQuery, err := dr.createDNSQuery(domainSegments)

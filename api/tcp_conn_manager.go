@@ -49,8 +49,7 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 
 // For the requests that are not made with
 // TLS handshake.
-func (tcm *TCPConnManager) initTCPConn(hwp httpWsParams) error {
-	start := time.Now()
+func (tcm *TCPConnManager) initTCPConn(hwp cliParams) error {
 	if tcm.isConnTls {
 		certPool := mustPrepareCertPool()
 		conn, err := tls.Dial(
@@ -62,7 +61,6 @@ func (tcm *TCPConnManager) initTCPConn(hwp httpWsParams) error {
 			return err
 		}
 		tcm.conn = conn
-		fmt.Println("tcp conn init:", time.Since(start))
 
 		return nil
 	}
@@ -72,7 +70,6 @@ func (tcm *TCPConnManager) initTCPConn(hwp httpWsParams) error {
 		return err
 	}
 	tcm.conn = conn
-	fmt.Println("tcp conn init:", time.Since(start))
 	return nil
 }
 
@@ -81,13 +78,11 @@ func (tcm *TCPConnManager) initTCPConn(hwp httpWsParams) error {
 func (tcm TCPConnManager) dispatchHTTPRequest(httpRequest string) []byte {
 	tcm.setDeadlineToConn()
 
-	start := time.Now()
 	_, err := tcm.conn.Write([]byte(httpRequest))
 	if err != nil {
 		fmt.Printf("write tcp read: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("time elapsed writing req:", time.Since(start))
 
 	return tcm.readHTTPRespFromConn()
 }
@@ -104,8 +99,6 @@ func (tcm TCPConnManager) dispatchHTTPRequest(httpRequest string) []byte {
 // entire data is sent in one single stream and we can
 // close the TCP conn after the first read.
 func (tcm TCPConnManager) readHTTPRespFromConn() []byte {
-	start := time.Now()
-
 	var response bytes.Buffer
 	var readContentLength int = -1
 	var contentLength int
@@ -138,7 +131,6 @@ tcpLoop:
 		response.Write(buf[:n])
 
 		if readIteration == headerIteration {
-			fmt.Println("Time elapsed reading req:", time.Since(start))
 			headerParam = identifyHeaderParam(buf[:n])
 		}
 

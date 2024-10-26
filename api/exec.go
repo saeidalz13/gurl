@@ -13,7 +13,7 @@ func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
 	// Preparing the parameters for gurl app.
-	hwp := newHTTPWSParams()
+	hwp := initCli()
 
 	// Fetching IP and port of the remote address.
 	ip, port, isConnTls := newRemoteAddrManager(ipCacheDir, hwp.domain).resolveConnectionInfo()
