@@ -172,34 +172,6 @@ tcpLoop:
 	return response.Bytes()
 }
 
-func isServerVerified(respHeaser []byte, key string) bool {
-	specialGUID := "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-	var secWsAccept []byte
-
-	for _, line := range bytes.Split(respHeaser, []byte("\r\n")) {
-		lineSegments := bytes.Split(line, []byte(":"))
-
-		if len(lineSegments) != 2 {
-			continue
-		}
-
-		if bytes.Equal(lineSegments[0], []byte("Sec-WebSocket-Accept")) {
-			secWsAccept = bytes.TrimSpace(lineSegments[1])
-			break
-		}
-	}
-
-	if secWsAccept == nil {
-		return false
-	}
-
-	h := sha1.New()
-	h.Write([]byte(key + specialGUID))
-	hashed := h.Sum(nil)
-
-	return base64.StdEncoding.EncodeToString(hashed) == string(secWsAccept)
-}
-
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
@@ -331,12 +303,40 @@ lineLoop:
 	return contentLength, bodyPos
 }
 
-// bytesLines := bytes.Split(buf[:n], []byte("\r\n"))
-// for _, line := range bytesLines {
-// 	// If "0" was found at the end of the body
-// 	// it shows that there's no more bytes to
-// 	// be sent from the server.
-// 	if bytes.Equal(line, asciiZero) {
-// 		return response.Bytes()
-// 	}
-// }
+// When the WebSocket server sends the 101 Code, it
+// includes `Sec-Weboscket-Accept: VALUE`. `VALUE` is
+// the base64 encoded value of SHA-1 hash of the
+// client key + special GUID. This GUID is a unversal
+// constant.
+//
+// This function checks the `VALUE` seny by the server
+// with the base64 SHA-1 hash of client key. If they match
+// the response was sent from the requested server and not
+// and itermediary malicious middle man.
+func isServerVerified(respHeaser []byte, key string) bool {
+	specialGUID := "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	var secWsAccept []byte
+
+	for _, line := range bytes.Split(respHeaser, []byte("\r\n")) {
+		lineSegments := bytes.Split(line, []byte(":"))
+
+		if len(lineSegments) != 2 {
+			continue
+		}
+
+		if bytes.Equal(lineSegments[0], []byte("Sec-WebSocket-Accept")) {
+			secWsAccept = bytes.TrimSpace(lineSegments[1])
+			break
+		}
+	}
+
+	if secWsAccept == nil {
+		return false
+	}
+
+	h := sha1.New()
+	h.Write([]byte(key + specialGUID))
+	hashed := h.Sum(nil)
+
+	return base64.StdEncoding.EncodeToString(hashed) == string(secWsAccept)
+}
