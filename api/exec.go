@@ -7,10 +7,6 @@ import (
 	"github.com/saeidalz13/gurl/internal/methodparser"
 )
 
-// Entry point of the application execution.
-//
-// Depending on the url protocol, it can be
-// a secure or insecure request.
 func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
@@ -42,6 +38,10 @@ func ExecGurl() {
 	if cp.ctJson {
 		hrc.AddContentTypeJson()
 	}
+	if cp.cookies != "" {
+		hrc.AddCookie(cp.cookies)
+	}
+
 	httpRequest := hrc.Create()
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)

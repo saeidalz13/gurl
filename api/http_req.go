@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -21,7 +22,11 @@ func newHTTPRequestCreator(domain, path, method string) HTTPRequest {
 }
 
 func (h *HTTPRequest) AddContentTypeJson() {
-	h.additonalHeaders = append(h.additonalHeaders, "application/json")
+	h.additonalHeaders = append(h.additonalHeaders, "Content-Type: application/json")
+}
+
+func (h *HTTPRequest) AddCookie(cookies string) {
+	h.additonalHeaders = append(h.additonalHeaders, fmt.Sprintf("Cookie: %s", cookies))
 }
 
 func (h HTTPRequest) Create() string {

@@ -7,23 +7,34 @@ import (
 )
 
 type cliParams struct {
-	domain  string
-	method  string
 	verbose bool
 	ctJson  bool
+	domain  string
+	method  string
+	cookies string
 }
 
 func initCli() cliParams {
-	// CLI init section
 	domainCmd := flag.NewFlagSet("domain", flag.ExitOnError)
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
 	ctJsonPtr := domainCmd.Bool("json", false, "Add HTTP Request Header -> Content-Type: application/json")
-	verbose := domainCmd.Bool("v", false, "Prints metadata and steps of request")
+	verbose := domainCmd.Bool("v", false, "Verbose run")
+	cookies := domainCmd.String("cookies", "", "Add cookie to request header; e.g. -cookies='name1=value1; name2=value2'")
+
+	help := flag.Bool("h", false, "gURL usage")
+	flag.Parse()
+
+	if *help {
+		domainCmd.Usage()
+		os.Exit(0)
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("must provide domain name")
 		domainCmd.Usage()
 		os.Exit(1)
 	}
+
 	domainCmd.Parse(os.Args[2:])
 
 	return cliParams{
@@ -31,5 +42,6 @@ func initCli() cliParams {
 		method:  *methodPtr,
 		verbose: *verbose,
 		ctJson:  *ctJsonPtr,
+		cookies: *cookies,
 	}
 }
