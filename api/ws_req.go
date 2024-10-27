@@ -6,7 +6,13 @@ import (
 	"strings"
 )
 
-func createWsRequest(path, domain string) (string, error) {
+func generateSecWsKey() (string, error) {
+	key := make([]byte, 16)
+	_, err := rand.Read(key)
+	return base64.StdEncoding.EncodeToString(key), err
+}
+
+func createWsRequest(path, domain, secWsKey string) string {
 	sb := strings.Builder{}
 	sb.Grow(50)
 
@@ -33,14 +39,7 @@ func createWsRequest(path, domain string) (string, error) {
 	sb.WriteString("\r\n")
 
 	sb.WriteString("Sec-Websocket-Key: ")
-
-	key := make([]byte, 16)
-	_, err := rand.Read(key)
-	if err != nil {
-		return "", err
-	}
-
-	sb.WriteString(base64.StdEncoding.EncodeToString(key))
+	sb.WriteString(secWsKey)
 	sb.WriteString("\r\n")
 
 	sb.WriteString("Sec-WebSocket-Version: 13\r\n")
@@ -48,5 +47,5 @@ func createWsRequest(path, domain string) (string, error) {
 	// Ending of request based on HTTP
 	sb.WriteString("\r\n")
 
-	return sb.String(), nil
+	return sb.String()
 }

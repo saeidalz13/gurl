@@ -2,9 +2,11 @@ package api
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -170,10 +172,38 @@ tcpLoop:
 	return response.Bytes()
 }
 
+func isServerVerified(respHeaser []byte, key string) bool {
+	specialGUID := "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	var secWsAccept []byte
+
+	for _, line := range bytes.Split(respHeaser, []byte("\r\n")) {
+		lineSegments := bytes.Split(line, []byte(":"))
+
+		if len(lineSegments) != 2 {
+			continue
+		}
+
+		if bytes.Equal(lineSegments[0], []byte("Sec-WebSocket-Accept")) {
+			secWsAccept = bytes.TrimSpace(lineSegments[1])
+			break
+		}
+	}
+
+	if secWsAccept == nil {
+		return false
+	}
+
+	h := sha1.New()
+	h.Write([]byte(key + specialGUID))
+	hashed := h.Sum(nil)
+
+	return base64.StdEncoding.EncodeToString(hashed) == string(secWsAccept)
+}
+
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
-func (tcm TCPConnManager) readWebSocketData() {
+func (tcm TCPConnManager) readWebSocketData(secWsKey string) {
 	headerIteration := true
 
 	for {
@@ -202,6 +232,10 @@ func (tcm TCPConnManager) readWebSocketData() {
 				os.Exit(1)
 			}
 			headerIteration = false
+
+			if !isServerVerified(buf[:n], secWsKey) {
+				break
+			}
 
 		} else {
 			payload, err := wsutils.ParseWsFrame(buf[:n])

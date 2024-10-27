@@ -27,9 +27,12 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		wsRequest, err := createWsRequest(dp.Path, dp.Domain)
+		secWsKey, err := generateSecWsKey()
 		errutils.CheckErr(err)
-		go tcm.readWebSocketData()
+
+		wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
+
+		go tcm.readWebSocketData(secWsKey)
 		tcm.writeWebSocketData([]byte(wsRequest))
 		return
 	}
