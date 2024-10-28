@@ -9,11 +9,11 @@ const (
 )
 
 var ValidHttpMethods = map[string]bool{
-	MethodGET:    true,
-	MethodPOST:   true,
-	MethodPATCH:  true,
-	MethodDELETE: true,
-	MethodPUT:    true,
+	MethodGET:  true,
+	MethodPOST: true,
+	// MethodPATCH:  true,
+	// MethodDELETE: true,
+	// MethodPUT:    true,
 }
 
 const (

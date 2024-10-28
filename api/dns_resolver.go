@@ -158,6 +158,7 @@ func (dr DNSResolver) MustResolveIP() net.IP {
 	pos += 12
 	dataLen := binary.BigEndian.Uint16(response[pos-2 : pos])
 
+	fmt.Println(dataLen)
 	if dataLen != 4 {
 		log.Fatalln("invalid ip address received from dns - must be ipv4")
 	}

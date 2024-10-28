@@ -4,6 +4,7 @@ import (
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/methodparser"
 )
 
@@ -37,15 +38,20 @@ func ExecGurl() {
 		return
 	}
 
-	hrc := newHTTPRequestCreator(dp.Domain, dp.Path, method)
-	if cp.ctJson {
-		hrc.AddContentTypeJson()
-	}
-	if cp.cookies != "" {
-		hrc.AddCookie(cp.cookies)
+	hrg := NewHTTPRequestGenerator(dp.Domain, dp.Path, cp.cookies)
+	var httpRequest string
+methodBlock:
+	switch method {
+	case httpconstants.MethodGET:
+		httpRequest = hrg.GenerateGETRequest()
+	case httpconstants.MethodPOST:
+		if cp.jsonData != "" {
+			httpRequest = hrg.GeneratePOSTRequest(cp.jsonData, "application/json")
+			break methodBlock
+		}
+
 	}
 
-	httpRequest := hrc.Create()
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
 }
