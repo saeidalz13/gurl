@@ -108,3 +108,13 @@ func (h HTTPRequestGenerator) GeneratePUTPATCHRequest(data, contentType string) 
 
 	return h.sb.String()
 }
+
+func (h HTTPRequestGenerator) GenerateDELETERequest() string {
+	h.addGenericPartsHeader(httpconstants.MethodDELETE)
+	h.addCookie()
+	h.addAdditionalHeaders()
+
+	// separator between body and header
+	h.sb.WriteString("\r\n")
+	return h.sb.String()
+}

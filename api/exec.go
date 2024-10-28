@@ -54,6 +54,8 @@ methodBlock:
 			httpRequest = hrg.GeneratePUTPATCHRequest(cp.jsonData, "application/json")
 			break methodBlock
 		}
+	case httpconstants.MethodDELETE:
+		httpRequest = hrg.GenerateDELETERequest()
 	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
