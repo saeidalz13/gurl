@@ -95,7 +95,7 @@ func (h HTTPRequestGenerator) GeneratePOSTRequest(data, contentType string) stri
 	return h.sb.String()
 }
 
-func (h HTTPRequestGenerator) GeneratePUTRequest(data, contentType string) string {
+func (h HTTPRequestGenerator) GeneratePUTPATCHRequest(data, contentType string) string {
 	h.addGenericPartsHeader(httpconstants.MethodPUT)
 	h.addCookie()
 	h.adjustHeaderForData(contentType, len(data))

@@ -49,9 +49,9 @@ methodBlock:
 			httpRequest = hrg.GeneratePOSTRequest(cp.jsonData, "application/json")
 			break methodBlock
 		}
-	case httpconstants.MethodPUT:
+	case httpconstants.MethodPUT, httpconstants.MethodPATCH:
 		if cp.jsonData != "" {
-			httpRequest = hrg.GeneratePUTRequest(cp.jsonData, "application/json")
+			httpRequest = hrg.GeneratePUTPATCHRequest(cp.jsonData, "application/json")
 			break methodBlock
 		}
 	}
