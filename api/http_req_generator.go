@@ -11,23 +11,29 @@ type HTTPRequestGenerator struct {
 	domain           string
 	path             string
 	cookies          string
+	method           string
+	contentType      string
+	data             string
 	additonalHeaders []string
 
 	sb *strings.Builder
 }
 
-func NewHTTPRequestGenerator(domain, path, cookies string) HTTPRequestGenerator {
+func NewHTTPRequestGenerator(domain, path, cookies, method, contentType, data string) HTTPRequestGenerator {
 	return HTTPRequestGenerator{
 		domain:           domain,
 		path:             path,
 		cookies:          cookies,
+		method:           method,
+		contentType:      contentType,
+		data:             data,
 		additonalHeaders: make([]string, 0, 3),
 	}
 }
 
-func (h *HTTPRequestGenerator) adjustHeaderForData(contentType string, contentLength int) {
-	h.additonalHeaders = append(h.additonalHeaders, fmt.Sprintf("Content-Type: %s", contentType))
-	h.additonalHeaders = append(h.additonalHeaders, fmt.Sprintf("Content-Length: %d", contentLength))
+func (h *HTTPRequestGenerator) adjustHeaderForData() {
+	h.additonalHeaders = append(h.additonalHeaders, fmt.Sprintf("Content-Type: %s", h.contentType))
+	h.additonalHeaders = append(h.additonalHeaders, fmt.Sprintf("Content-Length: %d", len(h.data)))
 }
 
 func (h *HTTPRequestGenerator) addAdditionalHeaders() {
@@ -71,7 +77,7 @@ func (h *HTTPRequestGenerator) addGenericPartsHeader(method string) {
 	h.sb = sb
 }
 
-func (h HTTPRequestGenerator) GenerateGETRequest() string {
+func (h HTTPRequestGenerator) generateGETRequest() string {
 	h.addGenericPartsHeader(httpconstants.MethodGET)
 	h.addCookie()
 	h.addAdditionalHeaders()
@@ -81,35 +87,35 @@ func (h HTTPRequestGenerator) GenerateGETRequest() string {
 	return h.sb.String()
 }
 
-func (h HTTPRequestGenerator) GeneratePOSTRequest(data, contentType string) string {
+func (h HTTPRequestGenerator) generatePOSTRequest() string {
 	h.addGenericPartsHeader(httpconstants.MethodPOST)
 	h.addCookie()
-	h.adjustHeaderForData(contentType, len(data))
+	h.adjustHeaderForData()
 	h.addAdditionalHeaders()
 
 	// separator between body and header
 	h.sb.WriteString("\r\n")
 
-	h.sb.WriteString(data)
+	h.sb.WriteString(h.data)
 
 	return h.sb.String()
 }
 
-func (h HTTPRequestGenerator) GeneratePUTPATCHRequest(data, contentType string) string {
+func (h HTTPRequestGenerator) generatePUTPATCHRequest() string {
 	h.addGenericPartsHeader(httpconstants.MethodPUT)
 	h.addCookie()
-	h.adjustHeaderForData(contentType, len(data))
+	h.adjustHeaderForData()
 	h.addAdditionalHeaders()
 
 	// separator between body and header
 	h.sb.WriteString("\r\n")
 
-	h.sb.WriteString(data)
+	h.sb.WriteString(h.data)
 
 	return h.sb.String()
 }
 
-func (h HTTPRequestGenerator) GenerateDELETERequest() string {
+func (h HTTPRequestGenerator) generateDELETERequest() string {
 	h.addGenericPartsHeader(httpconstants.MethodDELETE)
 	h.addCookie()
 	h.addAdditionalHeaders()
@@ -117,4 +123,25 @@ func (h HTTPRequestGenerator) GenerateDELETERequest() string {
 	// separator between body and header
 	h.sb.WriteString("\r\n")
 	return h.sb.String()
+}
+
+func (h HTTPRequestGenerator) Generate() string {
+	switch h.method {
+	case httpconstants.MethodGET:
+		return h.generateGETRequest()
+
+	case httpconstants.MethodPOST:
+		return h.generatePOSTRequest()
+
+	case httpconstants.MethodPUT, httpconstants.MethodPATCH:
+		return h.generatePUTPATCHRequest()
+
+	case httpconstants.MethodDELETE:
+		return h.generateDELETERequest()
+
+	default:
+		// The error catching has been taken care of
+		// in the steps before
+		return ""
+	}
 }

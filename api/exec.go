@@ -4,7 +4,6 @@ import (
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
-	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/methodparser"
 )
 
@@ -28,39 +27,33 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		secWsKey, err := generateSecWsKey()
-		errutils.CheckErr(err)
-
-		wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
-
-		go tcm.readWebSocketData(secWsKey)
-		tcm.writeWebSocketData([]byte(wsRequest))
+		manageWebSocket(dp, tcm)
 		return
 	}
 
 	contentType := determineContentType(cp.dataType)
 
-	hrg := NewHTTPRequestGenerator(dp.Domain, dp.Path, cp.cookies)
-	var httpRequest string
-methodBlock:
-	switch method {
-	case httpconstants.MethodGET:
-		httpRequest = hrg.GenerateGETRequest()
-
-	case httpconstants.MethodPOST:
-		httpRequest = hrg.GeneratePOSTRequest(cp.data, contentType)
-		break methodBlock
-
-	case httpconstants.MethodPUT, httpconstants.MethodPATCH:
-		httpRequest = hrg.GeneratePUTPATCHRequest(cp.data, contentType)
-		break methodBlock
-
-	case httpconstants.MethodDELETE:
-		httpRequest = hrg.GenerateDELETERequest()
-	}
+	httpRequest := NewHTTPRequestGenerator(
+		dp.Domain,
+		dp.Path,
+		cp.cookies,
+		method,
+		contentType,
+		cp.data,
+	).Generate()
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
+}
+
+func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager) {
+	secWsKey, err := generateSecWsKey()
+	errutils.CheckErr(err)
+
+	wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
+
+	go tcm.readWebSocketData(secWsKey)
+	tcm.writeWebSocketData([]byte(wsRequest))
 }
 
 func determineContentType(dataType uint8) string {
