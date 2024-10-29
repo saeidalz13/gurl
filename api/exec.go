@@ -38,26 +38,40 @@ func ExecGurl() {
 		return
 	}
 
+	contentType := determineContentType(cp.dataType)
+
 	hrg := NewHTTPRequestGenerator(dp.Domain, dp.Path, cp.cookies)
 	var httpRequest string
 methodBlock:
 	switch method {
 	case httpconstants.MethodGET:
 		httpRequest = hrg.GenerateGETRequest()
+
 	case httpconstants.MethodPOST:
-		if cp.jsonData != "" {
-			httpRequest = hrg.GeneratePOSTRequest(cp.jsonData, "application/json")
-			break methodBlock
-		}
+		httpRequest = hrg.GeneratePOSTRequest(cp.data, contentType)
+		break methodBlock
+
 	case httpconstants.MethodPUT, httpconstants.MethodPATCH:
-		if cp.jsonData != "" {
-			httpRequest = hrg.GeneratePUTPATCHRequest(cp.jsonData, "application/json")
-			break methodBlock
-		}
+		httpRequest = hrg.GeneratePUTPATCHRequest(cp.data, contentType)
+		break methodBlock
+
 	case httpconstants.MethodDELETE:
 		httpRequest = hrg.GenerateDELETERequest()
 	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
+}
+
+func determineContentType(dataType uint8) string {
+	switch dataType {
+	case dataTypeJson:
+		return "application/json"
+	case dataTypeText:
+		return "text/plain"
+	case dataTypeImage:
+		return "image/jpeg"
+	}
+
+	return ""
 }
