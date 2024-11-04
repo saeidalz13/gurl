@@ -80,14 +80,22 @@ func (ram RemoteAddrManager) fetchCachedIp() (net.IP, error) {
 
 func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
 	domainFile := filepath.Join(ram.ipCacheDir, ram.domain)
-	// 0o600 read and write permissions only for the owner
-	f, err := os.OpenFile(domainFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
-	if err != nil {
-		return err
-	}
 
-	_, err = f.WriteString(ipStr)
-	return err
+	// TODO: Decide which one to use for writing
+	// Method 1: (commented out for now)
+	// 0o600 read and write permissions only for the owner.
+	//
+	// os.O_EXCL causes `OpenFile` to give error if file already exists.
+	// https://man7.org/linux/man-pages/man2/open.2.html
+	// f, err := os.OpenFile(domainFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
+	// if err != nil {
+	// 	return err
+	// }
+	// _, err = f.WriteString(ipStr)
+	// return err
+
+	// Method 2:
+	return os.WriteFile(domainFile, []byte(ipStr), 0o600)
 }
 
 // bool shows if the connection should be TLS
