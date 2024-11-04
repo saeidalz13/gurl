@@ -94,6 +94,27 @@ func PrintWsClientMsg(msg string) {
 	fmt.Printf("%s[CLIENT]:%s %s\n", BoldGreen, FormatReset, msg)
 }
 
+func PrintClientInfo(ip, httpRequest string) {
+	fmt.Printf("%s\n[To Server] >>%s\n", BoldWhite, FormatReset)
+
+	fmt.Printf("%s\nServer Details%s\n", BoldPurple, FormatReset)
+	fmt.Println("---------------------")
+	fmt.Printf("%sServer IP:%s %s\n", RegularPurple, FormatReset, ip)
+	// Other details
+	fmt.Print("\n")
+
+	fmt.Printf("%sRequest%s\n", BoldGreen, FormatReset)
+	fmt.Println("---------------------")
+	fmt.Print(httpRequest)
+
+	// If the request didn't have body, it wouldn't
+	// end with new line character.
+	if httpRequest[len(httpRequest)-1] != '\n' {
+		fmt.Print("\n\n")
+	}
+	fmt.Printf("%s[From Server] <<%s\n", BoldWhite, FormatReset)
+}
+
 func GetWsInputFromStdin() []byte {
 	// If we use fmt.Scanln(), then it only reads
 	// the characters until the space. bufio lets

@@ -5,6 +5,7 @@ import (
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/methodparser"
+	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
 func ExecGurl() {
@@ -41,6 +42,10 @@ func ExecGurl() {
 		contentType,
 		cp.data,
 	).Generate()
+
+	if cp.verbose {
+		terminalutils.PrintClientInfo(ip.String(), httpRequest)
+	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
