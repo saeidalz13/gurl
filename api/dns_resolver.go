@@ -11,35 +11,38 @@ import (
 	"github.com/saeidalz13/gurl/internal/errutils"
 )
 
+const (
+	// Minimum capacity needed for query slice
+	// sent to DNS
+	// header 12 + QTYPE 2 + QCLASS 2
+	minRequiredCap = 16
+)
+
 type DNSResolver struct {
 	domainSegments []string
 }
 
-func newDNSResolver(domainSegments []string) DNSResolver {
-	return DNSResolver{domainSegments}
+func NewDNSResolver(domainSegments []string) DNSResolver {
+	return DNSResolver{
+		domainSegments: domainSegments,
+	}
 }
 
 /*
-Header sections
+Prepares the query needs to be sent to DNS server.
 
-  - ID
-  - Flags
-  - Questions
-  - Answer RRs (RR stands for Resource Record)
-  - Authority RRs
-  - Additional RRs
-
-Queries section:
-  - Whatever you want to put in the query
+It is comprised of header and query section.
+12 bytes for header and variable length for
+the query section.
 */
 func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 	id := uint16(rand.Intn(65535)) // To be within 8 bytes
+	query := make([]byte, 0, minRequiredCap)
 
-	minBytesNeeded := 16 // header 12 + QTYPE 2 + QCLASS 2
-	query := make([]byte, 0, minBytesNeeded)
-
-	// * Header Section (12 bytes)
-	// Transaction ID
+	/*
+		Header Section (12 bytes)
+	*/
+	// ** Transaction ID (2 bytes)
 	// We want the generated into 2 bytes as requested by DNS standard
 	// Extracts the **most significant byte (MSB)** (shifts 16-bit, 8 bits to the right)
 	// This means number / (2^8) -> This drops the remainder
@@ -47,29 +50,34 @@ func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 	// bitwise AND that extracts the **least significant byte (LSB)**
 	query = append(query, byte(id&0xff))
 
-	// Flags
+	// ** Flags (2 bytes)
 	// This means this is a standard query
 	// Every bit of this is for a certain flag.
-	// This just means standard query
-	query = append(query, 0x01, 0x00)
+	// 0x01 + 0x00 means standard query
+	// Byte 1: QR (bit 0), OPCODE (bits 1 to 4), AA (bit 5), TC (bit 6), RD (bit 7)
+	// Byte 2: RA (bit 0), Z (bit 1 to 3), RCODE (bit 4 to 7)
+	query = append(query, 0b00000001, 0b00000000)
 
-	// QDCOUNT -> number of entries in question section
-	query = append(query, 0x00, 0x01)
+	// ** QDCOUNT -> number of entries in question section (2 bytes -> 16 bit integer).
+	// query = append(query, 0x00, 0x01)
+	query = append(query, 0b00000000, 0b00000001)
 
-	// ANCOUNT -> number of RR in Answer section which should be
+	// ** ANCOUNT -> number of RR in Answer section which should be (2 bytes -> 16 bit integer).
 	// zero for the request
-	query = append(query, 0x00, 0x00)
+	query = append(query, 0b00000000, 0b00000000)
 
-	// NSCOUNT -> number of RR in Authority section which
+	// ** NSCOUNT -> number of RR in Authority section which (2 bytes -> 16 bit integer).
 	// we do not have. Only meaningful in responses, so zero
-	query = append(query, 0x00, 0x00)
+	query = append(query, 0b00000000, 0b00000000)
 
-	// ARCOUNT -> number of RR in the Additional section.
+	// ** ARCOUNT -> number of RR in the Additional section (2 bytes -> 16 bit integer).
 	// No additional records follow
-	query = append(query, 0x00, 0x00)
+	query = append(query, 0b00000000, 0b00000000)
 
-	// * Question Section (Variable len)
-	// QNAME (Domain section)
+	/*
+		Query Section (Variable length)
+	*/
+	// ** QNAME (Domain section) (Variable len)
 	for _, part := range dr.domainSegments {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
@@ -79,13 +87,15 @@ func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 		query = append(query, byte(len(part)))
 		query = append(query, []byte(part)...)
 	}
-	query = append(query, 0x00) // To show that this is end of the domain
+	query = append(query, 0b00000000) // To show that this is end of the domain
 
-	// QTYPE -> Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
-	query = append(query, 0x00, 0x01)
+	// ** QTYPE -> Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
+	query = append(query, 0b00000000, 0b00000001)
+	// Query for IPv6 (AAAA record)
+	// query := append(query, 0b00000000, 0b00011100)
 
-	// QCLASS -> Class IN (Internet) - 2 bytes
-	query = append(query, 0x00, 0x01)
+	// ** QCLASS -> Class IN (Internet) - 2 bytes
+	query = append(query, 0b00000000, 0b00000001)
 
 	return query, nil
 }
