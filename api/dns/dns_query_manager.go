@@ -14,14 +14,16 @@ const (
 )
 
 type DNSQueryManager struct {
+	ipType         uint8
 	domainSegments []string
 	query          []byte
 }
 
-func NewDNSQueryManager(domainSegments []string) *DNSQueryManager {
+func NewDNSQueryManager(domainSegments []string, ipType uint8) *DNSQueryManager {
 	return &DNSQueryManager{
 		query:          make([]byte, 0, minQueryCap),
 		domainSegments: domainSegments,
+		ipType:         ipType,
 	}
 }
 
@@ -95,15 +97,19 @@ func (d *DNSQueryManager) setQuestionName() {
 	d.query = append(d.query, 0b00000000) // To show that this is end of the domain
 }
 
+// Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
 func (d *DNSQueryManager) setQuestionType() {
-	// ** QTYPE -> Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
-	d.query = append(d.query, 0b00000000, 0b00000001)
-	// Query for IPv6 (AAAA record)
-	// query := append(query, 0b00000000, 0b00011100)
+	if d.ipType == ipTypeV4 {
+		d.query = append(d.query, 0b00000000, 0b00000001)
+		return
+	}
+
+	// For IPv6 (AAAA record)
+	d.query = append(d.query, 0b00000000, 0b00011100)
 }
 
+// CLASS -> Class IN (Internet) - 2 bytes
 func (d *DNSQueryManager) setQuestionClass() {
-	// ** QCLASS -> Class IN (Internet) - 2 bytes
 	d.query = append(d.query, 0b00000000, 0b00000001)
 }
 
