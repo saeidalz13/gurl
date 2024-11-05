@@ -10,7 +10,7 @@ import (
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func MustResolveIP(domainSegments []string) (net.IP, uint8) {
-	ipType := ipTypeV4
+	ipType := IpTypeV4
 
 dnsLoop:
 	for {
@@ -33,7 +33,7 @@ dnsLoop:
 		if err != nil {
 			switch err.Error() {
 			case "no ipv4":
-				ipType = ipTypeV6
+				ipType = IpTypeV6
 				continue dnsLoop
 			case "no ipv6":
 				log.Fatalln("could not fetch ip from DNS")

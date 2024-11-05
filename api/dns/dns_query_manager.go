@@ -6,13 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	// Minimum capacity needed for query slice
-	// sent to DNS
-	// header 12 + QTYPE 2 + QCLASS 2
-	minQueryCap = 16
-)
-
 type DNSQueryManager struct {
 	ipType         uint8
 	domainSegments []string
@@ -99,7 +92,7 @@ func (d *DNSQueryManager) setQuestionName() {
 
 // Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
 func (d *DNSQueryManager) setQuestionType() {
-	if d.ipType == ipTypeV4 {
+	if d.ipType == IpTypeV4 {
 		d.query = append(d.query, 0b00000000, 0b00000001)
 		return
 	}
