@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/saeidalz13/gurl/api/dns"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 )
@@ -112,7 +113,7 @@ func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
 	// unnecessary network I/O.
 	ip, err := ram.fetchCachedIp()
 	if err != nil {
-		ip = newDNSResolver(ram.domainSegments).MustResolveIP()
+		ip = dns.NewDNSResolver(ram.domainSegments).MustResolveIP()
 		if err := ram.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
 			fmt.Printf("skipped ip caching: %v\n", err)
