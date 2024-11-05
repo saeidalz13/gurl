@@ -22,7 +22,6 @@ func NewDNSResolver(domainSegments []string) DNSResolver {
 // Average time is 25 ms.
 func (dr DNSResolver) MustResolveIP() net.IP {
 	query := NewDNSQueryManager(dr.domainSegments).CreateClassAQuery()
-
 	// dnsQuery, err := dr.createDNSQuery()
 	// errutils.CheckErr(err)
 
