@@ -19,6 +19,13 @@ type RemoteAddrManager struct {
 	domainSegments []string
 }
 
+type ConnInfo struct {
+	isTls  bool
+	ipType uint8
+	port   int
+	ip     net.IP
+}
+
 func newRemoteAddrManager(ipCacheDir, domain string, domainSegments []string) RemoteAddrManager {
 	return RemoteAddrManager{
 		domain:         domain,
@@ -100,24 +107,35 @@ func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
 }
 
 // bool shows if the connection should be TLS
-func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
+func (ram RemoteAddrManager) resolveConnectionInfo() ConnInfo {
 	if ram.isDomainLocalHost() {
 		ip := net.IPv4(127, 0, 0, 1)
 		port, err := ram.extractPort()
 		errutils.CheckErr(err)
-		return ip, port, false
+		return ConnInfo{
+			ip:     ip,
+			ipType: 0,
+			port:   port,
+			isTls:  false,
+		}
 	}
 
 	// If not localhost, the IP needs to be fetched
 	// from DNS server. We cache the data to prevent
 	// unnecessary network I/O.
+	var ipType uint8
 	ip, err := ram.fetchCachedIp()
 	if err != nil {
-		ip = dns.MustResolveIP(ram.domainSegments)
+		ip, ipType = dns.MustResolveIP(ram.domainSegments)
 		if err := ram.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
 			fmt.Printf("skipped ip caching: %v\n", err)
 		}
 	}
-	return ip, httpconstants.PortHTTPS, true
+	return ConnInfo{
+		ip:     ip,
+		ipType: ipType,
+		port:   httpconstants.PortHTTPS,
+		isTls:  true,
+	}
 }

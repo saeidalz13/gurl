@@ -9,8 +9,8 @@ import (
 
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
-func MustResolveIP(domainSegments []string) net.IP {
-	ipType := ipTypeV6
+func MustResolveIP(domainSegments []string) (net.IP, uint8) {
+	ipType := ipTypeV4
 
 dnsLoop:
 	for {
@@ -23,8 +23,8 @@ dnsLoop:
 		_, err = udpConn.Write(query)
 		errutils.CheckErr(err)
 
-		// DNS responses are small, 128 bytes is enough
-		// Response share the same structure of request with an additional Answers section
+		// DNS responses are small, 256 bytes is enough. Especially that
+		// I only have one question per request.
 		response := make([]byte, 256)
 		_, _, err = udpConn.ReadFrom(response)
 		errutils.CheckErr(err)
@@ -42,6 +42,6 @@ dnsLoop:
 			}
 		}
 
-		return ip
+		return ip, ipType
 	}
 }
