@@ -26,3 +26,4 @@ go.work.sum
 gurl
 # cacert.pem
 certs/
+junk.txt

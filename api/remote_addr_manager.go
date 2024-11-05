@@ -113,7 +113,7 @@ func (ram RemoteAddrManager) resolveConnectionInfo() (net.IP, int, bool) {
 	// unnecessary network I/O.
 	ip, err := ram.fetchCachedIp()
 	if err != nil {
-		ip = dns.NewDNSResolver(ram.domainSegments).MustResolveIP()
+		ip = dns.MustResolveIP(ram.domainSegments)
 		if err := ram.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
 			fmt.Printf("skipped ip caching: %v\n", err)
