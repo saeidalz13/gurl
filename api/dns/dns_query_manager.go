@@ -18,9 +18,10 @@ type DNSQueryManager struct {
 	query          []byte
 }
 
-func NewDNSQueryManager() *DNSQueryManager {
+func NewDNSQueryManager(domainSegments []string) *DNSQueryManager {
 	return &DNSQueryManager{
-		query: make([]byte, 0, minQueryCap),
+		query:          make([]byte, 0, minQueryCap),
+		domainSegments: domainSegments,
 	}
 }
 
