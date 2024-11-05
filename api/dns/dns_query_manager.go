@@ -109,7 +109,7 @@ func (d *DNSQueryManager) setQuestion() {
 	d.setQuestionClass()
 }
 
-func (d *DNSQueryManager) CreateQuery() []byte {
+func (d *DNSQueryManager) CreateClassAQuery() []byte {
 	d.setHeader()
 	d.setQuestion()
 	return d.query

@@ -21,7 +21,7 @@ func NewDNSResolver(domainSegments []string) DNSResolver {
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func (dr DNSResolver) MustResolveIP() net.IP {
-	query := NewDNSQueryManager(dr.domainSegments).CreateQuery()
+	query := NewDNSQueryManager(dr.domainSegments).CreateClassAQuery()
 
 	// dnsQuery, err := dr.createDNSQuery()
 	// errutils.CheckErr(err)
