@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
+	// Entering point of the app.
 	api.ExecGurl()
 }
