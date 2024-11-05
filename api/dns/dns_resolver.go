@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"log"
 	"net"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
@@ -9,8 +10,9 @@ import (
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func MustResolveIP(domainSegments []string) net.IP {
-	ipType := ipTypeV4
+	ipType := ipTypeV6
 
+dnsLoop:
 	for {
 		query := NewDNSQueryManager(domainSegments, ipType).CreateQuery()
 
@@ -23,12 +25,22 @@ func MustResolveIP(domainSegments []string) net.IP {
 
 		// DNS responses are small, 128 bytes is enough
 		// Response share the same structure of request with an additional Answers section
-		response := make([]byte, 128)
+		response := make([]byte, 256)
 		_, _, err = udpConn.ReadFrom(response)
 		errutils.CheckErr(err)
 
-		ip, err := NewDNSResponseParser(response, ipTypeV4).Parse()
-		errutils.CheckErr(err)
+		ip, err := NewDNSResponseParser(response, ipType).Parse()
+		if err != nil {
+			switch err.Error() {
+			case "no ipv4":
+				ipType = ipTypeV6
+				continue dnsLoop
+			case "no ipv6":
+				log.Fatalln("could not fetch ip from DNS")
+			default:
+				log.Fatalln(err)
+			}
+		}
 
 		return ip
 	}
