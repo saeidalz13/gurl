@@ -11,13 +11,6 @@ import (
 	"github.com/saeidalz13/gurl/internal/errutils"
 )
 
-const (
-	// Minimum capacity needed for query slice
-	// sent to DNS
-	// header 12 + QTYPE 2 + QCLASS 2
-	minRequiredCap = 16
-)
-
 type DNSResolver struct {
 	domainSegments []string
 }
@@ -37,7 +30,7 @@ the query section.
 */
 func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 	id := uint16(rand.Intn(65535)) // To be within 8 bytes
-	query := make([]byte, 0, minRequiredCap)
+	query := make([]byte, 0, 16)
 
 	/*
 		Header Section (12 bytes)
@@ -103,14 +96,16 @@ func (dr DNSResolver) createDNSQuery() ([]byte, error) {
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
 func (dr DNSResolver) MustResolveIP() net.IP {
-	dnsQuery, err := dr.createDNSQuery()
-	errutils.CheckErr(err)
+	query := NewDNSQueryManager().CreateQuery()
+
+	// dnsQuery, err := dr.createDNSQuery()
+	// errutils.CheckErr(err)
 
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
 	errutils.CheckErr(err)
 	defer udpConn.Close()
 
-	_, err = udpConn.Write(dnsQuery)
+	_, err = udpConn.Write(query)
 	errutils.CheckErr(err)
 
 	// DNS responses are small, 128 bytes is enough
