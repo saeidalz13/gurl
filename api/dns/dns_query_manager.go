@@ -42,6 +42,10 @@ func (d *DNSQueryManager) setTransactionId() {
 func (d *DNSQueryManager) setStandardFlags() {
 	// Byte 1: QR (bit 0), OPCODE (bits 1 to 4), AA (bit 5), TC (bit 6), RD (bit 7)
 	// Byte 2: RA (bit 0), Z (bit 1 to 3), RCODE (bit 4 to 7)
+
+	// RD is a flag for recursive lookup of DNS server. It means
+	// the DNS server will look into other servers if not found
+	// in its cahce or zone files. We set it to 1 to get that feature.
 	d.query = append(d.query, 0b00000001, 0b00000000)
 }
 
