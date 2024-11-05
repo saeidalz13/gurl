@@ -28,7 +28,7 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		manageWebSocket(dp, tcm)
+		manageWebSocket(dp, tcm, cp.verbose)
 		return
 	}
 
@@ -44,20 +44,24 @@ func ExecGurl() {
 	).Generate()
 
 	if cp.verbose {
-		terminalutils.PrintClientInfo(ip.String(), httpRequest)
+		terminalutils.PrintHTTPClientInfo(ip.String(), httpRequest)
 	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
 }
 
-func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager) {
+func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager, verbose bool) {
 	secWsKey, err := generateSecWsKey()
 	errutils.CheckErr(err)
 
 	wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
 
-	go tcm.readWebSocketData(secWsKey)
+	if verbose {
+		terminalutils.PrintWebSocketClientInfo(tcm.ip.String(), wsRequest)
+	}
+
+	go tcm.readWebSocketData(secWsKey, verbose)
 	tcm.writeWebSocketData([]byte(wsRequest))
 }
 

@@ -94,7 +94,7 @@ func PrintWsClientMsg(msg string) {
 	fmt.Printf("%s[CLIENT]:%s %s\n", BoldGreen, FormatReset, msg)
 }
 
-func PrintClientInfo(ip, httpRequest string) {
+func PrintHTTPClientInfo(ip, httpRequest string) {
 	fmt.Printf("%s\n[To Server] >>%s\n", BoldWhite, FormatReset)
 
 	fmt.Printf("%s\nServer Details%s\n", BoldPurple, FormatReset)
@@ -113,6 +113,22 @@ func PrintClientInfo(ip, httpRequest string) {
 		fmt.Print("\n\n")
 	}
 	fmt.Printf("%s[From Server] <<%s\n", BoldWhite, FormatReset)
+}
+
+func PrintWebSocketClientInfo(ip, wsRequest string) {
+	fmt.Printf("%s\n[To Server] >>%s\n", BoldWhite, FormatReset)
+
+	fmt.Printf("%s\nDetails%s\n", BoldPurple, FormatReset)
+	fmt.Println("---------------------")
+	fmt.Printf("%sServer IP:%s %s\n", RegularPurple, FormatReset, ip)
+	// Other details
+	fmt.Print("\n")
+
+	fmt.Printf("%sRequest%s\n", BoldGreen, FormatReset)
+	fmt.Println("---------------------")
+	fmt.Print(wsRequest)
+
+	fmt.Printf("%s[From Server] <<%s\n\n", BoldWhite, FormatReset)
 }
 
 func GetWsInputFromStdin() []byte {

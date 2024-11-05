@@ -175,7 +175,7 @@ tcpLoop:
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
-func (tcm TCPConnManager) readWebSocketData(secWsKey string) {
+func (tcm TCPConnManager) readWebSocketData(secWsKey string, verbose bool) {
 	headerIteration := true
 
 	for {
@@ -200,12 +200,17 @@ func (tcm TCPConnManager) readWebSocketData(secWsKey string) {
 			// 101 is code for switching protocol showing
 			// that server is ready to be serving WS
 			if !strings.Contains(respHeader, "101") {
+				fmt.Println("Server did not accept WS req:")
 				fmt.Println(respHeader)
 				os.Exit(1)
 			}
 			headerIteration = false
+			if verbose {
+				fmt.Println(respHeader)
+			}
 
 			if !isServerVerified(buf[:n], secWsKey) {
+				fmt.Println("server key not verified")
 				break
 			}
 
@@ -223,6 +228,8 @@ func (tcm TCPConnManager) readWebSocketData(secWsKey string) {
 	os.Exit(1)
 }
 
+// The initial msgByte is the request sent to the
+// server to initiate the WS connection.
 func (tcm TCPConnManager) writeWebSocketData(msgByte []byte) {
 	for {
 		_, err := tcm.conn.Write(msgByte)
@@ -324,7 +331,7 @@ func isServerVerified(respHeaser []byte, key string) bool {
 			continue
 		}
 
-		if bytes.Equal(lineSegments[0], []byte("Sec-WebSocket-Accept")) {
+		if bytes.Equal(bytes.ToLower(lineSegments[0]), []byte("sec-websocket-accept")) {
 			secWsAccept = bytes.TrimSpace(lineSegments[1])
 			break
 		}
