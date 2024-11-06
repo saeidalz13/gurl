@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/saeidalz13/gurl/api/cli"
+	"github.com/saeidalz13/gurl/api/conninfo"
 	"github.com/saeidalz13/gurl/api/http"
 	"github.com/saeidalz13/gurl/api/tcp"
 	"github.com/saeidalz13/gurl/api/ws"
@@ -24,8 +25,11 @@ func ExecGurl() {
 	err = dp.Parse()
 	errutils.CheckErr(err)
 
-	ram := newRemoteAddrManager(ipCacheDir, dp.Domain, dp.DomainSegment)
-	connInfo := ram.resolveConnectionInfo()
+	connInfo := conninfo.NewConnInfoResolver(
+		ipCacheDir,
+		dp.Domain,
+		dp.DomainSegment,
+	).Resolve()
 
 	tcm := tcp.NewTCPConnManager(connInfo, dp.Domain)
 	err = tcm.InitTCPConn()
