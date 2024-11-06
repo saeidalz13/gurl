@@ -1,11 +1,11 @@
 package dns
 
 import (
-	"fmt"
 	"net"
 	"os"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
@@ -37,15 +37,15 @@ dnsLoop:
 				ipType = IpTypeV6
 				dqm.toggleQuestionType(ipType)
 
-				fmt.Println("ipv4 could not fetched. attempting for ipv6...")
+				terminalutils.PrintAppWarning("ipv4 could not fetched. attempting for ipv6...")
 				continue dnsLoop
 
 			case "no ipv6":
-				fmt.Println("could not fetch ip from DNS")
+				terminalutils.PrintAppError("could not fetch ip from DNS")
 				os.Exit(1)
 
 			default:
-				fmt.Println(err)
+				terminalutils.PrintAppError(err.Error())
 				os.Exit(1)
 			}
 		}

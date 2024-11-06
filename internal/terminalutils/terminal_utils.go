@@ -131,6 +131,14 @@ func PrintWebSocketClientInfo(ip, wsRequest string) {
 	fmt.Printf("%s[From Server] <<%s\n\n", BoldWhite, FormatReset)
 }
 
+func PrintAppWarning(msg string) {
+	fmt.Printf("%s[WARNING]:%s %s\n", BoldYellow, FormatReset, msg)
+}
+
+func PrintAppError(msg string) {
+	fmt.Printf("%s[ERROR]:%s %s\n", BoldRed, FormatReset, msg)
+}
+
 func GetWsInputFromStdin() []byte {
 	// If we use fmt.Scanln(), then it only reads
 	// the characters until the space. bufio lets
