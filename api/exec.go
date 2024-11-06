@@ -21,9 +21,9 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	ram := newRemoteAddrManager(ipCacheDir, dp.Domain, dp.DomainSegment)
-	ip, port, isConnTls := ram.resolveConnectionInfo()
+	connInfo := ram.resolveConnectionInfo()
 
-	tcm := newTCPConnManager(ip, port, isConnTls, dp.Domain)
+	tcm := newTCPConnManager(connInfo, dp.Domain)
 	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)
 
@@ -44,7 +44,7 @@ func ExecGurl() {
 	).Generate()
 
 	if cp.verbose {
-		terminalutils.PrintHTTPClientInfo(ip.String(), httpRequest)
+		terminalutils.PrintHTTPClientInfo(connInfo.ip.String(), httpRequest)
 	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
@@ -58,7 +58,7 @@ func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager, verbose b
 	wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
 
 	if verbose {
-		terminalutils.PrintWebSocketClientInfo(tcm.ip.String(), wsRequest)
+		terminalutils.PrintWebSocketClientInfo(tcm.connInfo.ip.String(), wsRequest)
 	}
 
 	go tcm.readWebSocketData(secWsKey, verbose)

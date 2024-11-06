@@ -6,22 +6,17 @@ import (
 	"strings"
 )
 
-const (
-	// Minimum capacity needed for query slice
-	// sent to DNS
-	// header 12 + QTYPE 2 + QCLASS 2
-	minQueryCap = 16
-)
-
 type DNSQueryManager struct {
+	ipType         uint8
 	domainSegments []string
 	query          []byte
 }
 
-func NewDNSQueryManager(domainSegments []string) *DNSQueryManager {
+func NewDNSQueryManager(domainSegments []string, ipType uint8) *DNSQueryManager {
 	return &DNSQueryManager{
 		query:          make([]byte, 0, minQueryCap),
 		domainSegments: domainSegments,
+		ipType:         ipType,
 	}
 }
 
@@ -95,15 +90,19 @@ func (d *DNSQueryManager) setQuestionName() {
 	d.query = append(d.query, 0b00000000) // To show that this is end of the domain
 }
 
+// Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
 func (d *DNSQueryManager) setQuestionType() {
-	// ** QTYPE -> Type A (host address) - 2 bytes (A, AAAA, MX, etc.)
-	d.query = append(d.query, 0b00000000, 0b00000001)
-	// Query for IPv6 (AAAA record)
-	// query := append(query, 0b00000000, 0b00011100)
+	if d.ipType == IpTypeV4 {
+		d.query = append(d.query, 0b00000000, 0b00000001)
+		return
+	}
+
+	// For IPv6 (AAAA record)
+	d.query = append(d.query, 0b00000000, 0b00011100)
 }
 
+// CLASS -> Class IN (Internet) - 2 bytes
 func (d *DNSQueryManager) setQuestionClass() {
-	// ** QCLASS -> Class IN (Internet) - 2 bytes
 	d.query = append(d.query, 0b00000000, 0b00000001)
 }
 
@@ -113,8 +112,24 @@ func (d *DNSQueryManager) setQuestion() {
 	d.setQuestionClass()
 }
 
-func (d *DNSQueryManager) CreateQuery() []byte {
+func (d *DNSQueryManager) prepareQuery() {
 	d.setHeader()
 	d.setQuestion()
+}
+
+func (d *DNSQueryManager) toggleQuestionType(ipType uint8) {
+	qLen := len(d.query)
+
+	if ipType == IpTypeV4 {
+		d.query[qLen-4] = 0b00000000
+		d.query[qLen-3] = 0b00000001
+		return
+	}
+
+	d.query[qLen-4] = 0b00000000
+	d.query[qLen-3] = 0b00011100
+}
+
+func (d *DNSQueryManager) Query() []byte {
 	return d.query
 }

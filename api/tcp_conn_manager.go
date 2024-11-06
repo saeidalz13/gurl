@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/saeidalz13/gurl/api/dns"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 	"github.com/saeidalz13/gurl/internal/wsutils"
@@ -29,19 +30,15 @@ const (
 var cacertsPEM []byte
 
 type TCPConnManager struct {
-	isConnTls bool
-	port      int
-	domain    string
-	ip        net.IP
-	conn      net.Conn
+	domain   string
+	connInfo ConnInfo
+	conn     net.Conn
 }
 
-func newTCPConnManager(ip net.IP, port int, isConnTls bool, domain string) TCPConnManager {
+func newTCPConnManager(connInfo ConnInfo, domain string) TCPConnManager {
 	return TCPConnManager{
-		ip:        ip,
-		port:      port,
-		isConnTls: isConnTls,
-		domain:    domain,
+		connInfo: connInfo,
+		domain:   domain,
 	}
 }
 
@@ -53,11 +50,16 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 // For the requests that are not made with
 // TLS handshake.
 func (tcm *TCPConnManager) InitTCPConn() error {
-	if tcm.isConnTls {
+	if tcm.connInfo.isTls {
+		addr := fmt.Sprintf("%s:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
+		if tcm.connInfo.ipType == dns.IpTypeV6 {
+			addr = fmt.Sprintf("[%s]:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
+		}
+
 		certPool := mustPrepareCertPool()
 		conn, err := tls.Dial(
 			"tcp",
-			fmt.Sprintf("%s:%d", tcm.ip.String(), tcm.port),
+			addr,
 			&tls.Config{RootCAs: certPool, ServerName: tcm.domain},
 		)
 		if err != nil {
@@ -68,7 +70,7 @@ func (tcm *TCPConnManager) InitTCPConn() error {
 		return nil
 	}
 
-	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: tcm.ip, Port: tcm.port})
+	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: tcm.connInfo.ip, Port: tcm.connInfo.port})
 	if err != nil {
 		return err
 	}

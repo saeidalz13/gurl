@@ -6,17 +6,6 @@ import (
 	"net"
 )
 
-const (
-	ipTypeV4 uint8 = iota
-	ipTypeV6
-)
-
-const (
-	startingQueryIdx       int = 12
-	endOfQuestionIndicator int = 0
-	byteForLength          int = 1
-)
-
 /*
 DNS Response:
 * Header
@@ -97,17 +86,18 @@ func (drp DNSResponseParser) Parse() (net.IP, error) {
 	dataLength := drp.determineDataLength()
 
 	switch drp.iptype {
-	case ipTypeV4:
+	case IpTypeV4:
 		if dataLength != 4 {
-			return nil, fmt.Errorf("dns server did not provide ipv4")
+			return nil, fmt.Errorf("no ipv4")
 		}
 		ip := net.IPv4(drp.response[drp.pos], drp.response[drp.pos+1], drp.response[drp.pos+2], drp.response[drp.pos+3])
 		return ip, nil
-	case ipTypeV6:
+	case IpTypeV6:
 		if dataLength != 16 {
-			return nil, fmt.Errorf("dns server did not provide ipv6")
+			return nil, fmt.Errorf("no ipv6")
 		}
-		return net.IPv6zero, nil
+		ip := net.IP(drp.response[drp.pos : drp.pos+16])
+		return ip, nil
 	default:
 		return nil, fmt.Errorf("unsupported IP type")
 	}

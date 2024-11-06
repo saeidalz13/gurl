@@ -2,30 +2,54 @@ package dns
 
 import (
 	"net"
+	"os"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
 // Fetch the domain IPv4 from 8.8.8.8 (Google server).
 // Average time is 25 ms.
-func MustResolveIP(domainSegments []string) net.IP {
-	query := NewDNSQueryManager(domainSegments).CreateQuery()
-
+func MustResolveIP(domainSegments []string) (net.IP, uint8) {
+	ipType := IpTypeV4
 	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
 	errutils.CheckErr(err)
 	defer udpConn.Close()
 
-	_, err = udpConn.Write(query)
-	errutils.CheckErr(err)
+	dqm := NewDNSQueryManager(domainSegments, ipType)
+	dqm.prepareQuery()
 
-	// DNS responses are small, 128 bytes is enough
-	// Response share the same structure of request with an additional Answers section
-	response := make([]byte, 128)
-	_, _, err = udpConn.ReadFrom(response)
-	errutils.CheckErr(err)
+dnsLoop:
+	for {
+		_, err = udpConn.Write(dqm.Query())
+		errutils.CheckErr(err)
 
-	ip, err := NewDNSResponseParser(response, ipTypeV4).Parse()
-	errutils.CheckErr(err)
+		// DNS responses are small, 256 bytes is enough. Especially that
+		// I only have one question per request.
+		response := make([]byte, 256)
+		_, _, err = udpConn.ReadFrom(response)
+		errutils.CheckErr(err)
 
-	return ip
+		ip, err := NewDNSResponseParser(response, ipType).Parse()
+		if err != nil {
+			switch err.Error() {
+			case "no ipv4":
+				ipType = IpTypeV6
+				dqm.toggleQuestionType(ipType)
+
+				terminalutils.PrintAppWarning("ipv4 could not fetched. attempting for ipv6...")
+				continue dnsLoop
+
+			case "no ipv6":
+				terminalutils.PrintAppError("could not fetch ip from DNS")
+				os.Exit(1)
+
+			default:
+				terminalutils.PrintAppError(err.Error())
+				os.Exit(1)
+			}
+		}
+
+		return ip, ipType
+	}
 }
