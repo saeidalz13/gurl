@@ -1,4 +1,4 @@
-package api
+package http
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 )
 
 type HTTPRequestGenerator struct {
+	dataType         uint8
 	domain           string
 	path             string
 	cookies          string
@@ -19,13 +20,13 @@ type HTTPRequestGenerator struct {
 	sb *strings.Builder
 }
 
-func NewHTTPRequestGenerator(domain, path, cookies, method, contentType, data string) HTTPRequestGenerator {
+func NewHTTPRequestGenerator(domain, path, cookies, method, data string, dataType uint8) HTTPRequestGenerator {
 	return HTTPRequestGenerator{
 		domain:           domain,
 		path:             path,
 		cookies:          cookies,
 		method:           method,
-		contentType:      contentType,
+		dataType:         dataType,
 		data:             data,
 		additonalHeaders: make([]string, 0, 3),
 	}
@@ -125,7 +126,22 @@ func (h HTTPRequestGenerator) generateDELETERequest() string {
 	return h.sb.String()
 }
 
+func (h *HTTPRequestGenerator) determineContentType() {
+	switch h.dataType {
+	case httpconstants.DataTypeJson:
+		h.contentType = "application/json"
+	case httpconstants.DataTypeText:
+		h.contentType = "text/plain"
+	case httpconstants.DataTypeImage:
+		h.contentType = "image/jpeg"
+	default:
+		// Leave content type to zero value of string
+	}
+}
+
 func (h HTTPRequestGenerator) Generate() string {
+	h.determineContentType()
+
 	switch h.method {
 	case httpconstants.MethodGET:
 		return h.generateGETRequest()

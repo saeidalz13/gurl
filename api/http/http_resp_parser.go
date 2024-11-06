@@ -1,4 +1,4 @@
-package api
+package http
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ HTTP response includes 3 main segments
  2. Headers (variable number of lines)
  3. Body (Separated from the rest with \r\n)
 */
-type HTTPResponse struct {
+type HTTPResponseParser struct {
 	version    string
 	statusCode string
 	statusMsg  string
@@ -24,16 +24,16 @@ type HTTPResponse struct {
 	responseSegments []string
 }
 
-func newHTTPResponseParser(respBytes []byte) HTTPResponse {
+func NewHTTPResponseParser(respBytes []byte) HTTPResponseParser {
 	responseSegments := strings.Split(string(respBytes), "\r\n")
-	httpResp := HTTPResponse{
+	httpResp := HTTPResponseParser{
 		headers:          make([]string, 0, 3),
 		responseSegments: responseSegments,
 	}
 	return httpResp
 }
 
-func (hr HTTPResponse) determineStatusCodeBashColor() string {
+func (hr HTTPResponseParser) determineStatusCodeBashColor() string {
 	switch hr.statusCode[0] {
 	case encodingutils.ASCII2:
 		return terminalutils.BoldGreen
@@ -54,7 +54,7 @@ func (hr HTTPResponse) determineStatusCodeBashColor() string {
 // In case of Transfer-Encoding: chunked, there will be
 // two integers at the beginning and end of JSON resp.
 // these 2 should be removed for aesthetics
-func (hr HTTPResponse) trimJsonResp(body string) string {
+func (hr HTTPResponseParser) trimJsonResp(body string) string {
 	for _, header := range hr.headers {
 		headerSegments := strings.Split(header, ":")
 
@@ -82,7 +82,7 @@ func (hr HTTPResponse) trimJsonResp(body string) string {
 	return body
 }
 
-func (hr HTTPResponse) parse() HTTPResponse {
+func (hr HTTPResponseParser) Parse() HTTPResponseParser {
 	var bodyIdx int
 	statusLineNum := 0
 
@@ -120,7 +120,7 @@ func (hr HTTPResponse) parse() HTTPResponse {
 	return hr
 }
 
-func (hr HTTPResponse) printPretty(verbose bool) {
+func (hr HTTPResponseParser) Print(verbose bool) {
 	if verbose {
 		fmt.Printf("\n%sStatus%s\n", terminalutils.BoldYellow, terminalutils.FormatReset)
 		fmt.Println("---------------------")
