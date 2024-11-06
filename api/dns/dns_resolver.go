@@ -1,8 +1,9 @@
 package dns
 
 import (
-	"log"
+	"fmt"
 	"net"
+	"os"
 
 	"github.com/saeidalz13/gurl/internal/errutils"
 )
@@ -11,16 +12,16 @@ import (
 // Average time is 25 ms.
 func MustResolveIP(domainSegments []string) (net.IP, uint8) {
 	ipType := IpTypeV4
+	udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
+	errutils.CheckErr(err)
+	defer udpConn.Close()
+
+	dqm := NewDNSQueryManager(domainSegments, ipType)
+	dqm.prepareQuery()
 
 dnsLoop:
 	for {
-		query := NewDNSQueryManager(domainSegments, ipType).CreateQuery()
-
-		udpConn, err := net.DialUDP("udp", nil, &net.UDPAddr{Port: 53, IP: net.IPv4(8, 8, 8, 8)})
-		errutils.CheckErr(err)
-		defer udpConn.Close()
-
-		_, err = udpConn.Write(query)
+		_, err = udpConn.Write(dqm.Query())
 		errutils.CheckErr(err)
 
 		// DNS responses are small, 256 bytes is enough. Especially that
@@ -34,11 +35,18 @@ dnsLoop:
 			switch err.Error() {
 			case "no ipv4":
 				ipType = IpTypeV6
+				dqm.toggleQuestionType(ipType)
+
+				fmt.Println("ipv4 could not fetched. attempting for ipv6...")
 				continue dnsLoop
+
 			case "no ipv6":
-				log.Fatalln("could not fetch ip from DNS")
+				fmt.Println("could not fetch ip from DNS")
+				os.Exit(1)
+
 			default:
-				log.Fatalln(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 		}
 

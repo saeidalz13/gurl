@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/saeidalz13/gurl/api/dns"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 	"github.com/saeidalz13/gurl/internal/wsutils"
@@ -51,7 +52,7 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 func (tcm *TCPConnManager) InitTCPConn() error {
 	if tcm.connInfo.isTls {
 		addr := fmt.Sprintf("%s:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
-		if tcm.connInfo.ipType == 1 {
+		if tcm.connInfo.ipType == dns.IpTypeV6 {
 			addr = fmt.Sprintf("[%s]:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
 		}
 

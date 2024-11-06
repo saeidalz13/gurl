@@ -112,8 +112,24 @@ func (d *DNSQueryManager) setQuestion() {
 	d.setQuestionClass()
 }
 
-func (d *DNSQueryManager) CreateQuery() []byte {
+func (d *DNSQueryManager) prepareQuery() {
 	d.setHeader()
 	d.setQuestion()
+}
+
+func (d *DNSQueryManager) toggleQuestionType(ipType uint8) {
+	qLen := len(d.query)
+
+	if ipType == IpTypeV4 {
+		d.query[qLen-4] = 0b00000000
+		d.query[qLen-3] = 0b00000001
+		return
+	}
+
+	d.query[qLen-4] = 0b00000000
+	d.query[qLen-3] = 0b00011100
+}
+
+func (d *DNSQueryManager) Query() []byte {
 	return d.query
 }
