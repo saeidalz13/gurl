@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/saeidalz13/gurl/api/cli"
+	"github.com/saeidalz13/gurl/api/tcp"
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
@@ -25,12 +26,12 @@ func ExecGurl() {
 	ram := newRemoteAddrManager(ipCacheDir, dp.Domain, dp.DomainSegment)
 	connInfo := ram.resolveConnectionInfo()
 
-	tcm := newTCPConnManager(connInfo, dp.Domain)
+	tcm := tcp.NewTCPConnManager(connInfo, dp.Domain)
 	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		manageWebSocket(dp, tcm, cp.Verbose)
+		manageWebSocket(dp, tcm, cp.Verbose, connInfo.IP.String())
 		return
 	}
 
@@ -46,25 +47,25 @@ func ExecGurl() {
 	).Generate()
 
 	if cp.Verbose {
-		terminalutils.PrintHTTPClientInfo(connInfo.ip.String(), httpRequest)
+		terminalutils.PrintHTTPClientInfo(connInfo.IP.String(), httpRequest)
 	}
 
-	respBytes := tcm.dispatchHTTPRequest(httpRequest)
+	respBytes := tcm.DispatchHTTPRequest(httpRequest)
 	newHTTPResponseParser(respBytes).parse().printPretty(cp.Verbose)
 }
 
-func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager, verbose bool) {
+func manageWebSocket(dp domainparser.DomainParser, tcm tcp.TCPConnManager, verbose bool, ip string) {
 	secWsKey, err := generateSecWsKey()
 	errutils.CheckErr(err)
 
 	wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
 
 	if verbose {
-		terminalutils.PrintWebSocketClientInfo(tcm.connInfo.ip.String(), wsRequest)
+		terminalutils.PrintWebSocketClientInfo(ip, wsRequest)
 	}
 
-	go tcm.readWebSocketData(secWsKey, verbose)
-	tcm.writeWebSocketData([]byte(wsRequest))
+	go tcm.ReadWebSocketData(secWsKey, verbose)
+	tcm.WriteWebSocketData([]byte(wsRequest))
 }
 
 func determineContentType(dataType uint8) string {

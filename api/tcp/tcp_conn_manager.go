@@ -1,4 +1,4 @@
-package api
+package tcp
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 	"github.com/saeidalz13/gurl/internal/wsutils"
+	"github.com/saeidalz13/gurl/models"
 )
 
 const (
@@ -31,11 +32,11 @@ var cacertsPEM []byte
 
 type TCPConnManager struct {
 	domain   string
-	connInfo ConnInfo
+	connInfo models.ConnInfo
 	conn     net.Conn
 }
 
-func newTCPConnManager(connInfo ConnInfo, domain string) TCPConnManager {
+func NewTCPConnManager(connInfo models.ConnInfo, domain string) TCPConnManager {
 	return TCPConnManager{
 		connInfo: connInfo,
 		domain:   domain,
@@ -50,10 +51,10 @@ func (tcm TCPConnManager) setDeadlineToConn() {
 // For the requests that are not made with
 // TLS handshake.
 func (tcm *TCPConnManager) InitTCPConn() error {
-	if tcm.connInfo.isTls {
-		addr := fmt.Sprintf("%s:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
-		if tcm.connInfo.ipType == dns.IpTypeV6 {
-			addr = fmt.Sprintf("[%s]:%d", tcm.connInfo.ip.String(), tcm.connInfo.port)
+	if tcm.connInfo.IsTls {
+		addr := fmt.Sprintf("%s:%d", tcm.connInfo.IP.String(), tcm.connInfo.Port)
+		if tcm.connInfo.IPType == dns.IpTypeV6 {
+			addr = fmt.Sprintf("[%s]:%d", tcm.connInfo.IP.String(), tcm.connInfo.Port)
 		}
 
 		certPool := mustPrepareCertPool()
@@ -70,7 +71,7 @@ func (tcm *TCPConnManager) InitTCPConn() error {
 		return nil
 	}
 
-	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: tcm.connInfo.ip, Port: tcm.connInfo.port})
+	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: tcm.connInfo.IP, Port: tcm.connInfo.Port})
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func (tcm *TCPConnManager) InitTCPConn() error {
 
 // Write the prepare http request to TCP connection
 // and returns the response bytes.
-func (tcm TCPConnManager) dispatchHTTPRequest(httpRequest string) []byte {
+func (tcm TCPConnManager) DispatchHTTPRequest(httpRequest string) []byte {
 	tcm.setDeadlineToConn()
 
 	_, err := tcm.conn.Write([]byte(httpRequest))
@@ -177,7 +178,7 @@ tcpLoop:
 // Reads the content of websocket frame stream
 // on a separate goroutine to be able to both
 // read from and write to TCP conn concurrently.
-func (tcm TCPConnManager) readWebSocketData(secWsKey string, verbose bool) {
+func (tcm TCPConnManager) ReadWebSocketData(secWsKey string, verbose bool) {
 	headerIteration := true
 
 	for {
@@ -232,7 +233,7 @@ func (tcm TCPConnManager) readWebSocketData(secWsKey string, verbose bool) {
 
 // The initial msgByte is the request sent to the
 // server to initiate the WS connection.
-func (tcm TCPConnManager) writeWebSocketData(msgByte []byte) {
+func (tcm TCPConnManager) WriteWebSocketData(msgByte []byte) {
 	for {
 		_, err := tcm.conn.Write(msgByte)
 		if err != nil {
