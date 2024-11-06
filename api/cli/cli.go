@@ -1,24 +1,20 @@
-package api
+package cli
 
 import (
 	"flag"
 	"fmt"
 	"os"
-)
 
-const (
-	dataTypeJson uint8 = iota + 1
-	dataTypeText
-	dataTypeImage
+	"github.com/saeidalz13/gurl/internal/httpconstants"
 )
 
 type cliParams struct {
-	verbose  bool
-	dataType uint8
-	data     string
-	domain   string
-	method   string
-	cookies  string
+	Verbose  bool
+	DataType uint8
+	Data     string
+	Domain   string
+	Method   string
+	Cookies  string
 }
 
 func mustDetermineDataInfo(jsonPtr, textPtr *string) (uint8, string) {
@@ -31,17 +27,17 @@ func mustDetermineDataInfo(jsonPtr, textPtr *string) (uint8, string) {
 	}
 
 	if *jsonPtr != "" {
-		return dataTypeJson, *jsonPtr
+		return httpconstants.DataTypeJson, *jsonPtr
 	}
 
 	if *textPtr != "" {
-		return dataTypeText, *textPtr
+		return httpconstants.DataTypeText, *textPtr
 	}
 
 	return dataType, data
 }
 
-func initCli() cliParams {
+func InitCli() cliParams {
 	domainCmd := flag.NewFlagSet("domain", flag.ExitOnError)
 	methodPtr := domainCmd.String("method", "GET", "HTTP method")
 	jsonPtr := domainCmd.String("json", "", "Add json data to body")
@@ -68,11 +64,11 @@ func initCli() cliParams {
 	dataType, data := mustDetermineDataInfo(jsonPtr, textPtr)
 
 	return cliParams{
-		domain:   os.Args[1],
-		method:   *methodPtr,
-		verbose:  *verbose,
-		data:     data,
-		dataType: dataType,
-		cookies:  *cookies,
+		Domain:   os.Args[1],
+		Method:   *methodPtr,
+		Verbose:  *verbose,
+		Data:     data,
+		DataType: dataType,
+		Cookies:  *cookies,
 	}
 }
