@@ -4,6 +4,7 @@ import (
 	"github.com/saeidalz13/gurl/api/cli"
 	"github.com/saeidalz13/gurl/api/http"
 	"github.com/saeidalz13/gurl/api/tcp"
+	"github.com/saeidalz13/gurl/api/ws"
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
@@ -31,7 +32,13 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		manageWebSocket(dp, tcm, cp.Verbose, connInfo.IP.String())
+		ws.NewWebSocketManager(
+			dp.Domain,
+			dp.Path,
+			connInfo.IP.String(),
+			tcm,
+			cp.Verbose,
+		).Manage()
 		return
 	}
 
@@ -50,18 +57,4 @@ func ExecGurl() {
 
 	respBytes := tcm.DispatchHTTPRequest(httpRequest)
 	http.NewHTTPResponseParser(respBytes).Parse().Print(cp.Verbose)
-}
-
-func manageWebSocket(dp domainparser.DomainParser, tcm tcp.TCPConnManager, verbose bool, ip string) {
-	secWsKey, err := generateSecWsKey()
-	errutils.CheckErr(err)
-
-	wsRequest := createWsRequest(dp.Path, dp.Domain, secWsKey)
-
-	if verbose {
-		terminalutils.PrintWebSocketClientInfo(ip, wsRequest)
-	}
-
-	go tcm.ReadWebSocketData(secWsKey, verbose)
-	tcm.WriteWebSocketData([]byte(wsRequest))
 }
