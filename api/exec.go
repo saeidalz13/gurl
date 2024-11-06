@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/saeidalz13/gurl/api/cli"
+	"github.com/saeidalz13/gurl/api/http"
 	"github.com/saeidalz13/gurl/api/tcp"
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
@@ -51,7 +52,7 @@ func ExecGurl() {
 	}
 
 	respBytes := tcm.DispatchHTTPRequest(httpRequest)
-	newHTTPResponseParser(respBytes).parse().printPretty(cp.Verbose)
+	http.NewHTTPResponseParser(respBytes).Parse().Print(cp.Verbose)
 }
 
 func manageWebSocket(dp domainparser.DomainParser, tcm tcp.TCPConnManager, verbose bool, ip string) {
