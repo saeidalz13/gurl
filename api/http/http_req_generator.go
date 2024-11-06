@@ -2,7 +2,6 @@ package http
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/saeidalz13/gurl/internal/httpconstants"
@@ -136,8 +135,7 @@ func (h *HTTPRequestGenerator) determineContentType() {
 	case httpconstants.DataTypeImage:
 		h.contentType = "image/jpeg"
 	default:
-		fmt.Println("must never reach here")
-		os.Exit(1)
+		// Leave content type to zero value of string
 	}
 }
 
