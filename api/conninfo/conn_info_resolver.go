@@ -1,4 +1,4 @@
-package api
+package conninfo
 
 import (
 	"fmt"
@@ -14,26 +14,26 @@ import (
 	"github.com/saeidalz13/gurl/models"
 )
 
-type RemoteAddrManager struct {
+type ConnInfoResolver struct {
 	domain         string
 	ipCacheDir     string
 	domainSegments []string
 }
 
-func newRemoteAddrManager(ipCacheDir, domain string, domainSegments []string) RemoteAddrManager {
-	return RemoteAddrManager{
+func NewConnInfoResolver(ipCacheDir, domain string, domainSegments []string) ConnInfoResolver {
+	return ConnInfoResolver{
 		domain:         domain,
 		ipCacheDir:     ipCacheDir,
 		domainSegments: domainSegments,
 	}
 }
 
-func (ram RemoteAddrManager) isDomainLocalHost() bool {
-	return strings.Contains(ram.domain, "localhost") || strings.Contains(ram.domain, "127.0.0.1")
+func (c ConnInfoResolver) isDomainLocalHost() bool {
+	return strings.Contains(c.domain, "localhost") || strings.Contains(c.domain, "127.0.0.1")
 }
 
-func (ram RemoteAddrManager) extractPort() (int, error) {
-	domainSegments := strings.Split(ram.domain, ":")
+func (c ConnInfoResolver) extractPort() (int, error) {
+	domainSegments := strings.Split(c.domain, ":")
 
 	if len(domainSegments) != 2 {
 		return 0, fmt.Errorf("domain must be in format of ip:port")
@@ -42,8 +42,8 @@ func (ram RemoteAddrManager) extractPort() (int, error) {
 	return strconv.Atoi(domainSegments[1])
 }
 
-func (ram RemoteAddrManager) fetchCachedIp() (net.IP, error) {
-	domainFile := filepath.Join(ram.ipCacheDir, ram.domain)
+func (c ConnInfoResolver) fetchCachedIp() (net.IP, error) {
+	domainFile := filepath.Join(c.ipCacheDir, c.domain)
 	f, err := os.OpenFile(domainFile, os.O_RDONLY, 0o600)
 	if err != nil {
 		return nil, err
@@ -80,8 +80,8 @@ func (ram RemoteAddrManager) fetchCachedIp() (net.IP, error) {
 	return net.IPv4(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]), nil
 }
 
-func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
-	domainFile := filepath.Join(ram.ipCacheDir, ram.domain)
+func (c ConnInfoResolver) cacheDomainIp(ipStr string) error {
+	domainFile := filepath.Join(c.ipCacheDir, c.domain)
 
 	// TODO: Decide which one to use for writing
 	// Method 1: (commented out for now)
@@ -101,10 +101,10 @@ func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
 }
 
 // bool shows if the connection should be TLS
-func (ram RemoteAddrManager) resolveConnectionInfo() models.ConnInfo {
-	if ram.isDomainLocalHost() {
+func (c ConnInfoResolver) Resolve() models.ConnInfo {
+	if c.isDomainLocalHost() {
 		ip := net.IPv4(127, 0, 0, 1)
-		port, err := ram.extractPort()
+		port, err := c.extractPort()
 		errutils.CheckErr(err)
 		return models.ConnInfo{
 			IP:     ip,
@@ -118,10 +118,10 @@ func (ram RemoteAddrManager) resolveConnectionInfo() models.ConnInfo {
 	// from DNS server. We cache the data to prevent
 	// unnecessary network I/O.
 	var ipType uint8
-	ip, err := ram.fetchCachedIp()
+	ip, err := c.fetchCachedIp()
 	if err != nil {
-		ip, ipType = dns.MustResolveIP(ram.domainSegments)
-		if err := ram.cacheDomainIp(ip.String()); err != nil {
+		ip, ipType = dns.MustResolveIP(c.domainSegments)
+		if err := c.cacheDomainIp(ip.String()); err != nil {
 			// Should not stop the operation
 			fmt.Printf("skipped ip caching: %v\n", err)
 		}
