@@ -11,19 +11,13 @@ import (
 	"github.com/saeidalz13/gurl/api/dns"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
+	"github.com/saeidalz13/gurl/models"
 )
 
 type RemoteAddrManager struct {
 	domain         string
 	ipCacheDir     string
 	domainSegments []string
-}
-
-type ConnInfo struct {
-	isTls  bool
-	ipType uint8
-	port   int
-	ip     net.IP
 }
 
 func newRemoteAddrManager(ipCacheDir, domain string, domainSegments []string) RemoteAddrManager {
@@ -107,16 +101,16 @@ func (ram RemoteAddrManager) cacheDomainIp(ipStr string) error {
 }
 
 // bool shows if the connection should be TLS
-func (ram RemoteAddrManager) resolveConnectionInfo() ConnInfo {
+func (ram RemoteAddrManager) resolveConnectionInfo() models.ConnInfo {
 	if ram.isDomainLocalHost() {
 		ip := net.IPv4(127, 0, 0, 1)
 		port, err := ram.extractPort()
 		errutils.CheckErr(err)
-		return ConnInfo{
-			ip:     ip,
-			ipType: 0,
-			port:   port,
-			isTls:  false,
+		return models.ConnInfo{
+			IP:     ip,
+			IPType: 0,
+			Port:   port,
+			IsTls:  false,
 		}
 	}
 
@@ -132,10 +126,10 @@ func (ram RemoteAddrManager) resolveConnectionInfo() ConnInfo {
 			fmt.Printf("skipped ip caching: %v\n", err)
 		}
 	}
-	return ConnInfo{
-		ip:     ip,
-		ipType: ipType,
-		port:   httpconstants.PortHTTPS,
-		isTls:  true,
+	return models.ConnInfo{
+		IP:     ip,
+		IPType: ipType,
+		Port:   httpconstants.PortHTTPS,
+		IsTls:  true,
 	}
 }
