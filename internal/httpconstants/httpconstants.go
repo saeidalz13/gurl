@@ -20,3 +20,9 @@ const (
 	PortHTTPS = 443
 	PortHTTP  = 80
 )
+
+const (
+	DataTypeJson uint8 = iota + 1
+	DataTypeText
+	DataTypeImage
+)

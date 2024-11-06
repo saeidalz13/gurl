@@ -1,9 +1,11 @@
 package api
 
 import (
+	"github.com/saeidalz13/gurl/api/cli"
 	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
+	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/internal/methodparser"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
@@ -11,12 +13,12 @@ import (
 func ExecGurl() {
 	ipCacheDir := appconstants.MustMakeIpCacheDir()
 
-	cp := initCli()
+	cp := cli.InitCli()
 
-	method, err := methodparser.ParseMethod(cp.method)
+	method, err := methodparser.ParseMethod(cp.Method)
 	errutils.CheckErr(err)
 
-	dp := domainparser.NewDomainParser(cp.domain)
+	dp := domainparser.NewDomainParser(cp.Domain)
 	err = dp.Parse()
 	errutils.CheckErr(err)
 
@@ -28,27 +30,27 @@ func ExecGurl() {
 	errutils.CheckErr(err)
 
 	if dp.IsWebSocket {
-		manageWebSocket(dp, tcm, cp.verbose)
+		manageWebSocket(dp, tcm, cp.Verbose)
 		return
 	}
 
-	contentType := determineContentType(cp.dataType)
+	contentType := determineContentType(cp.DataType)
 
 	httpRequest := NewHTTPRequestGenerator(
 		dp.Domain,
 		dp.Path,
-		cp.cookies,
+		cp.Cookies,
 		method,
 		contentType,
-		cp.data,
+		cp.Data,
 	).Generate()
 
-	if cp.verbose {
+	if cp.Verbose {
 		terminalutils.PrintHTTPClientInfo(connInfo.ip.String(), httpRequest)
 	}
 
 	respBytes := tcm.dispatchHTTPRequest(httpRequest)
-	newHTTPResponseParser(respBytes).parse().printPretty(cp.verbose)
+	newHTTPResponseParser(respBytes).parse().printPretty(cp.Verbose)
 }
 
 func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager, verbose bool) {
@@ -67,11 +69,11 @@ func manageWebSocket(dp domainparser.DomainParser, tcm TCPConnManager, verbose b
 
 func determineContentType(dataType uint8) string {
 	switch dataType {
-	case dataTypeJson:
+	case httpconstants.DataTypeJson:
 		return "application/json"
-	case dataTypeText:
+	case httpconstants.DataTypeText:
 		return "text/plain"
-	case dataTypeImage:
+	case httpconstants.DataTypeImage:
 		return "image/jpeg"
 	}
 
