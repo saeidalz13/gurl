@@ -35,7 +35,8 @@ func ExecGurl() {
 	err = tcm.InitTCPConn()
 	errutils.CheckErr(err)
 
-	if dp.IsWebSocket {
+	switch dp.Protocol {
+	case domainparser.ProtocolWS:
 		ws.NewWebSocketManager(
 			dp.Domain,
 			dp.Path,
@@ -43,22 +44,22 @@ func ExecGurl() {
 			tcm,
 			cp.Verbose,
 		).Manage()
-		return
+
+	case domainparser.ProtocolHTTP:
+		httpRequest := http.NewHTTPRequestGenerator(
+			dp.Domain,
+			dp.Path,
+			cp.Cookies,
+			method,
+			cp.Data,
+			cp.DataType,
+		).Generate()
+
+		if cp.Verbose {
+			terminalutils.PrintHTTPClientInfo(connInfo.IP.String(), httpRequest)
+		}
+
+		respBytes := tcm.DispatchHTTPRequest(httpRequest)
+		http.NewHTTPResponseParser(respBytes).Parse().Print(cp.Verbose)
 	}
-
-	httpRequest := http.NewHTTPRequestGenerator(
-		dp.Domain,
-		dp.Path,
-		cp.Cookies,
-		method,
-		cp.Data,
-		cp.DataType,
-	).Generate()
-
-	if cp.Verbose {
-		terminalutils.PrintHTTPClientInfo(connInfo.IP.String(), httpRequest)
-	}
-
-	respBytes := tcm.DispatchHTTPRequest(httpRequest)
-	http.NewHTTPResponseParser(respBytes).Parse().Print(cp.Verbose)
 }

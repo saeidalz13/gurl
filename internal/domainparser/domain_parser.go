@@ -2,12 +2,18 @@ package domainparser
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+)
+
+const (
+	ProtocolHTTP uint8 = iota + 1
+	ProtocolWS
 )
 
 type DomainParser struct {
 	IsLocalHost   bool
-	IsWebSocket   bool
+	Protocol      uint8
 	Domain        string
 	Path          string
 	DomainSegment []string
@@ -65,9 +71,11 @@ func (d *DomainParser) trimProtocolFromWebSocketDomain() error {
 	return errors.New("if websocket, input domain must contain protocol: ws:// or wss://")
 }
 
-func (d *DomainParser) determineIfWebSocket() {
+func (d *DomainParser) determineProtocol() {
 	if strings.HasPrefix(d.Domain, "ws://") || strings.HasPrefix(d.Domain, "wss://") {
-		d.IsWebSocket = true
+		d.Protocol = ProtocolWS
+	} else {
+		d.Protocol = ProtocolHTTP
 	}
 }
 
@@ -79,18 +87,22 @@ func (d *DomainParser) determineIfLocalhost() {
 
 func (d *DomainParser) Parse() error {
 	d.Domain = strings.TrimSpace(d.Domain)
-	d.determineIfWebSocket()
+	d.determineProtocol()
 	d.determineIfLocalhost()
 
-	// WebSocket protocol
-	if d.IsWebSocket {
+	switch d.Protocol {
+	case ProtocolWS:
 		if err := d.trimProtocolFromWebSocketDomain(); err != nil {
 			return err
 		}
-	} else {
+
+	case ProtocolHTTP:
 		if err := d.trimProtocolFromHTTPDomain(); err != nil {
 			return err
 		}
+
+	default:
+		return fmt.Errorf("wrong protocol. must never reach here")
 	}
 
 	d.separateDomainAndPath()
