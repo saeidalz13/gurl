@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	ProtocolHTTP uint8 = iota
+	ProtocolWS
+)
+
 type DomainParser struct {
 	IsLocalHost   bool
 	IsWebSocket   bool
