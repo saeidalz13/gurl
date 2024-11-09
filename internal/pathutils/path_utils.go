@@ -1,4 +1,4 @@
-package appconstants
+package pathutils
 
 import (
 	"os"

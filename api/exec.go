@@ -6,15 +6,15 @@ import (
 	"github.com/saeidalz13/gurl/api/http"
 	"github.com/saeidalz13/gurl/api/tcp"
 	"github.com/saeidalz13/gurl/api/ws"
-	"github.com/saeidalz13/gurl/internal/appconstants"
 	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/methodparser"
+	"github.com/saeidalz13/gurl/internal/pathutils"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
 func ExecGurl() {
-	ipCacheDir := appconstants.MustMakeIpCacheDir()
+	ipCacheDir := pathutils.MustMakeIpCacheDir()
 
 	cp := cli.InitCli()
 
