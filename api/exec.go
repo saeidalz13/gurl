@@ -37,11 +37,10 @@ func ExecGurl() {
 
 	switch dp.Protocol {
 	case domainparser.ProtocolWS:
-		secWsKey, wsRequest, err := ws.NewWebSocketRequestGenerator(
-			dp.Domain,
-			dp.Path,
-		).Generate()
+		secWsKey, err := ws.GenerateSecWebSocketKey()
 		errutils.CheckErr(err)
+
+		wsRequest := ws.GenerateWebSocketRequest(dp.Domain, dp.Path, secWsKey)
 
 		if cp.Verbose {
 			terminalutils.PrintWebSocketClientInfo(connInfo.IP.String(), wsRequest)

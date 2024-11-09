@@ -5,6 +5,10 @@ import (
 	"encoding/base64"
 )
 
+const (
+	wsKeyLength = 16
+)
+
 func generateRandomKey(key []byte) (int, error) {
 	n, err := rand.Read(key)
 	if err != nil {
@@ -13,6 +17,13 @@ func generateRandomKey(key []byte) (int, error) {
 	return n, nil
 }
 
-func generateSecWsKey(key []byte) string {
-	return base64.StdEncoding.EncodeToString(key)
+func GenerateSecWebSocketKey() (string, error) {
+	key := make([]byte, wsKeyLength)
+
+	n, err := generateRandomKey(key)
+	if err != nil {
+		return "", nil
+	}
+
+	return base64.StdEncoding.EncodeToString(key[:n]), nil
 }
