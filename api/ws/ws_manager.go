@@ -5,31 +5,28 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/saeidalz13/gurl/api/tcp"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/terminalutils"
 )
 
-type WebSocketManager struct {
+type WebSocketRequestGenerator struct {
 	verbose  bool
 	path     string
 	domain   string
 	ip       string
 	secWsKey string
-	tcm      tcp.TCPConnManager
 }
 
-func NewWebSocketManager(domain, path, ip string, tcm tcp.TCPConnManager, verbose bool) WebSocketManager {
-	return WebSocketManager{
+func NewWebSocketRequestGenerator(domain, path, ip string, verbose bool) WebSocketRequestGenerator {
+	return WebSocketRequestGenerator{
 		domain:  domain,
 		path:    path,
 		ip:      ip,
-		tcm:     tcm,
 		verbose: verbose,
 	}
 }
 
-func (w *WebSocketManager) generateSecWsKey() {
+func (w *WebSocketRequestGenerator) generateSecWsKey() {
 	key := make([]byte, 16)
 	_, err := rand.Read(key)
 	errutils.CheckErr(err)
@@ -37,7 +34,7 @@ func (w *WebSocketManager) generateSecWsKey() {
 	w.secWsKey = base64.StdEncoding.EncodeToString(key)
 }
 
-func (w WebSocketManager) createWsRequest() string {
+func (w WebSocketRequestGenerator) createWsRequest() string {
 	sb := strings.Builder{}
 	sb.Grow(50)
 
@@ -75,7 +72,7 @@ func (w WebSocketManager) createWsRequest() string {
 	return sb.String()
 }
 
-func (w WebSocketManager) Manage() {
+func (w WebSocketRequestGenerator) Generate() (string, string) {
 	w.generateSecWsKey()
 	wsRequest := w.createWsRequest()
 
@@ -83,6 +80,5 @@ func (w WebSocketManager) Manage() {
 		terminalutils.PrintWebSocketClientInfo(w.ip, wsRequest)
 	}
 
-	go w.tcm.ReadWebSocketData(w.secWsKey, w.verbose)
-	w.tcm.WriteWebSocketData([]byte(wsRequest))
+	return w.secWsKey, wsRequest
 }
