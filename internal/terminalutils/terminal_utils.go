@@ -129,6 +129,8 @@ func PrintWebSocketClientInfo(ip, wsRequest string) {
 	fmt.Print(wsRequest)
 
 	fmt.Printf("%s[From Server] <<%s\n\n", BoldWhite, FormatReset)
+	fmt.Printf("%sResponse%s\n", BoldCyan, FormatReset)
+	fmt.Println("---------------------")
 }
 
 func PrintAppWarning(msg string) {
