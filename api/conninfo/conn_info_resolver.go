@@ -67,27 +67,12 @@ func (c ConnInfoResolver) fetchCachedIp() (net.IP, uint8, error) {
 		return nil, 0, err
 	}
 
-	ipStrSegments := strings.Split(string(buf[:n]), ".")
+	ip := net.ParseIP(string(buf[:n]))
 
-	if len(ipStrSegments) == 4 {
-		// Only 4 bytes, very likely to be created on stack.
-		// When passed as a pointer, it would be still
-		// pointing to the parent func stack frame not
-		// the heap which makes it more efficient in Go.
-		ip := make([]byte, 0, 4)
-		err := convertIpStringToBytes(ipStrSegments, &ip)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		return net.IPv4(ip[0], ip[1], ip[2], ip[3]), dns.IpTypeV4, nil
-
-	} else {
-		// This means IPv6 was stored. net.IP will
-		// do the conversion from []byte to net.IP
-		// under the hood.
-		return net.IP(buf[:n]), dns.IpTypeV6, nil
+	if ip.To4() != nil {
+		return ip.To4(), dns.IpTypeV4, nil
 	}
+	return ip, dns.IpTypeV6, nil
 }
 
 func (c ConnInfoResolver) cacheDomainIp(ipStr string) error {
