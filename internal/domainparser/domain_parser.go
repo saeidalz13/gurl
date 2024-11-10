@@ -99,7 +99,7 @@ func (d *DomainParser) Parse() error {
 			return err
 		}
 
-	case ProtocolHTTP:
+	case ProtocolHTTP, ProtocolHTTPS:
 		if err := d.trimProtocolFromHTTPDomain(); err != nil {
 			return err
 		}

@@ -50,7 +50,7 @@ func ExecGurl() {
 		go tcm.ReadWebSocketData(secWsKey, cp.Verbose)
 		tcm.WriteWebSocketData([]byte(wsRequest))
 
-	case domainparser.ProtocolHTTP:
+	case domainparser.ProtocolHTTP, domainparser.ProtocolHTTPS:
 		httpRequest := http.NewHTTPRequestGenerator(
 			dp.Domain,
 			dp.Path,
