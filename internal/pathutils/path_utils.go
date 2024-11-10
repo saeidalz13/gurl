@@ -13,7 +13,7 @@ func MustMakeIpCacheDir() string {
 
 	ipCacheDir := filepath.Join(homeDir, ".gurl", "ipcache")
 
-	os.MkdirAll(ipCacheDir, 0o600)
+	os.MkdirAll(ipCacheDir, 0o700)
 
 	return ipCacheDir
 }
