@@ -8,6 +8,7 @@ import (
 
 const (
 	ProtocolHTTP uint8 = iota + 1
+	ProtocolHTTPS
 	ProtocolWS
 )
 
@@ -74,8 +75,10 @@ func (d *DomainParser) trimProtocolFromWebSocketDomain() error {
 func (d *DomainParser) determineProtocol() {
 	if strings.HasPrefix(d.Domain, "ws://") || strings.HasPrefix(d.Domain, "wss://") {
 		d.Protocol = ProtocolWS
-	} else {
+	} else if strings.HasPrefix(d.Domain, "http://") {
 		d.Protocol = ProtocolHTTP
+	} else {
+		d.Protocol = ProtocolHTTPS
 	}
 }
 

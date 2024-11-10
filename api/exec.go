@@ -29,6 +29,7 @@ func ExecGurl() {
 		ipCacheDir,
 		dp.Domain,
 		dp.DomainSegment,
+		dp.Protocol,
 	).Resolve()
 
 	tcm := tcp.NewTCPConnManager(connInfo, dp.Domain)

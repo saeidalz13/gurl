@@ -9,22 +9,25 @@ import (
 	"strings"
 
 	"github.com/saeidalz13/gurl/api/dns"
+	"github.com/saeidalz13/gurl/internal/domainparser"
 	"github.com/saeidalz13/gurl/internal/errutils"
 	"github.com/saeidalz13/gurl/internal/httpconstants"
 	"github.com/saeidalz13/gurl/models"
 )
 
 type ConnInfoResolver struct {
+	protocol       uint8
 	domain         string
 	ipCacheDir     string
 	domainSegments []string
 }
 
-func NewConnInfoResolver(ipCacheDir, domain string, domainSegments []string) ConnInfoResolver {
+func NewConnInfoResolver(ipCacheDir, domain string, domainSegments []string, protocol uint8) ConnInfoResolver {
 	return ConnInfoResolver{
 		domain:         domain,
 		ipCacheDir:     ipCacheDir,
 		domainSegments: domainSegments,
+		protocol:       protocol,
 	}
 }
 
@@ -130,6 +133,6 @@ func (c ConnInfoResolver) Resolve() models.ConnInfo {
 		IP:     ip,
 		IPType: ipType,
 		Port:   httpconstants.PortHTTPS,
-		IsTls:  true,
+		IsTls:  c.protocol == domainparser.ProtocolHTTPS,
 	}
 }
