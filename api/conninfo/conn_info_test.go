@@ -1,6 +1,9 @@
 package conninfo
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -57,5 +60,47 @@ func TestExtractPort(t *testing.T) {
 				t.Fatalf("expected err: %s\tgot: %s", test.expectedErr, err.Error())
 			}
 		})
+	}
+}
+
+func TestCacheIP(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ipCacheDir := filepath.Join(homeDir, ".gurl", "test")
+	err = os.MkdirAll(ipCacheDir, 0o700)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ipToSave := "0.0.0.0"
+	testCir.ipCacheDir = ipCacheDir
+	testCir.domain = "myunittestgurl.com"
+	domainFile := filepath.Join(testCir.ipCacheDir, testCir.domain)
+
+	err = testCir.cacheDomainIp(ipToSave)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	savedIp, err := os.ReadFile(domainFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(savedIp, []byte(ipToSave)) {
+		t.Fatalf("expected saved IP: %s\tgot: %s", ipToSave, string(savedIp))
+	}
+
+	err = os.Remove(domainFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.Remove(ipCacheDir)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
