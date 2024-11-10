@@ -45,42 +45,49 @@ func (c ConnInfoResolver) extractPort() (int, error) {
 	return strconv.Atoi(domainSegments[1])
 }
 
-func (c ConnInfoResolver) fetchCachedIp() (net.IP, error) {
+func (c ConnInfoResolver) fetchCachedIp() (net.IP, uint8, error) {
 	domainFile := filepath.Join(c.ipCacheDir, c.domain)
 	f, err := os.OpenFile(domainFile, os.O_RDONLY, 0o600)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	defer f.Close()
 
-	// ip v4 string is xxx.xxx.xxx.xxx
+	// ipv4 -> xxx.xxx.xxx.xxx
 	// max is 4*3 bytes + 3 dots (bytes) = 15 bytes
-	buf := make([]byte, 15)
+	//
+	// ipv6 -> 8 groups of 4 hexadecimal digits, separated by colons
+	// 8 * 4 characters + 7 colons = 39 bytes
+	//
+	// Since we don't know which one is stored, set the max bytes
+	// possible to be read from the file
+	buf := make([]byte, 39)
 	n, err := f.Read(buf)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	ipStrSegments := strings.Split(string(buf[:n]), ".")
-	ipBytes := make([]byte, 0, 4)
 
-	for _, b := range ipStrSegments {
-		n, err := strconv.Atoi(b)
+	if len(ipStrSegments) == 4 {
+		// Only 4 bytes, very likely to be created on stack.
+		// When passed as a pointer, it would be still
+		// pointing to the parent func stack frame not
+		// the heap which makes it more efficient in Go.
+		ip := make([]byte, 0, 4)
+		err := convertIpStringToBytes(ipStrSegments, &ip)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
-		if n < 0 || n > 255 {
-			return nil, fmt.Errorf("ip segment > 255 or < 0: %d", n)
-		}
+		return net.IPv4(ip[0], ip[1], ip[2], ip[3]), dns.IpTypeV4, nil
 
-		ipBytes = append(ipBytes, byte(n))
+	} else {
+		// This means IPv6 was stored. net.IP will
+		// do the conversion from []byte to net.IP
+		// under the hood.
+		return net.IP(buf[:n]), dns.IpTypeV6, nil
 	}
-
-	if len(ipBytes) != 4 {
-		return nil, fmt.Errorf("cached ip is incorrect")
-	}
-
-	return net.IPv4(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]), nil
 }
 
 func (c ConnInfoResolver) cacheDomainIp(ipStr string) error {
@@ -109,19 +116,16 @@ func (c ConnInfoResolver) Resolve() models.ConnInfo {
 		ip := net.IPv4(127, 0, 0, 1)
 		port, err := c.extractPort()
 		errutils.CheckErr(err)
+
 		return models.ConnInfo{
 			IP:     ip,
-			IPType: 0,
+			IPType: dns.IpTypeV4,
 			Port:   port,
 			IsTls:  false,
 		}
 	}
 
-	// If not localhost, the IP needs to be fetched
-	// from DNS server. We cache the data to prevent
-	// unnecessary network I/O.
-	var ipType uint8
-	ip, err := c.fetchCachedIp()
+	ip, ipType, err := c.fetchCachedIp()
 	if err != nil {
 		ip, ipType = dns.MustResolveIP(c.domainSegments)
 		if err := c.cacheDomainIp(ip.String()); err != nil {
@@ -129,10 +133,16 @@ func (c ConnInfoResolver) Resolve() models.ConnInfo {
 			fmt.Printf("skipped ip caching: %v\n", err)
 		}
 	}
+
+	port := httpconstants.PortHTTPS
+	if c.protocol == domainparser.ProtocolHTTP {
+		port = httpconstants.PortHTTP
+	}
+
 	return models.ConnInfo{
 		IP:     ip,
 		IPType: ipType,
-		Port:   httpconstants.PortHTTPS,
+		Port:   port,
 		IsTls:  c.protocol == domainparser.ProtocolHTTPS,
 	}
 }

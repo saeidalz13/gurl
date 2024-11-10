@@ -8,7 +8,7 @@ const (
 )
 
 const (
-	IpTypeV4 uint8 = iota
+	IpTypeV4 uint8 = iota + 1
 	IpTypeV6
 )
 
