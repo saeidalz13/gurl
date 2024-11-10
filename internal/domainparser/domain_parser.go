@@ -109,6 +109,7 @@ func (d *DomainParser) Parse() error {
 	}
 
 	d.separateDomainAndPath()
+	d.Domain = strings.ToLower(d.Domain)
 	d.splitDomainIntoSegments()
 	return nil
 }

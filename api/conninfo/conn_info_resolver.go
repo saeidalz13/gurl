@@ -78,7 +78,6 @@ func (c ConnInfoResolver) fetchCachedIp() (net.IP, uint8, error) {
 func (c ConnInfoResolver) cacheDomainIp(ipStr string) error {
 	domainFile := filepath.Join(c.ipCacheDir, c.domain)
 
-	// TODO: Decide which one to use for writing
 	// Method 1: (commented out for now)
 	// 0o600 read and write permissions only for the owner.
 	//
