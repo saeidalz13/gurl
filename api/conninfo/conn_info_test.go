@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/saeidalz13/gurl/api/dns"
 )
 
 var testCir = ConnInfoResolver{}
@@ -94,11 +96,23 @@ func TestCacheIP(t *testing.T) {
 		t.Fatalf("expected saved IP: %s\tgot: %s", ipToSave, string(savedIp))
 	}
 
+	// Testing fetching the cached file
+	ip, ipType, err := testCir.fetchCachedIp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ip.String() != ipToSave {
+		t.Fatalf("expected ip: %s\tgot from reading cached: %s", ipToSave, ip.String())
+	}
+	if ipType != dns.IpTypeV4 {
+		t.Fatalf("expected ip type: %d\tgot: %d", dns.IpTypeV4, ipType)
+	}
+
+	// Clean up test files of cache
 	err = os.Remove(domainFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	err = os.Remove(ipCacheDir)
 	if err != nil {
 		t.Fatal(err)
